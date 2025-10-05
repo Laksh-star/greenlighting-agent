@@ -1,0 +1,29 @@
+# Core Dependencies
+anthropic>=0.34.0
+python-dotenv>=1.0.0
+
+# Agent SDK (when available - for now we'll build custom)
+# claude-agent-sdk>=0.1.0  # Currently in beta
+
+# API Clients
+requests>=2.31.0
+aiohttp>=3.9.0
+
+# Data Processing
+pandas>=2.1.0
+numpy>=1.24.0
+
+# MCP Protocol (Model Context Protocol)
+pydantic>=2.5.0
+httpx>=0.25.0
+
+# Utilities
+python-dateutil>=2.8.2
+rich>=13.7.0  # For beautiful terminal output
+typer>=0.9.0  # For CLI commands
+pyyaml>=6.0.1
+
+# Optional: For advanced features
+# openai>=1.3.0  # If using multi-provider
+# beautifulsoup4>=4.12.0  # For web scraping if needed
+# plotly>=5.18.0  # For visualization in reports
