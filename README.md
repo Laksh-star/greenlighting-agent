@@ -1,5 +1,11 @@
 # 🎬 Movie/TV Project Greenlighting Agent
 
+<div align="center">
+  <video src="demo.mp4" autoplay loop muted playsinline width="100%"></video>
+  <br/>
+  <sub>Courtesy: Replit Free Agent Day</sub>
+</div>
+
 An AI-powered decision support system using Claude Agent SDK that helps studios and production companies evaluate whether to greenlight film and TV projects.
 
 ## 🎯 What It Does
