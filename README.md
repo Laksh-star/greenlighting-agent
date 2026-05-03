@@ -1,7 +1,7 @@
 # 🎬 Movie/TV Project Greenlighting Agent
 
 <div align="center">
-  <video src="demo.mp4" autoplay loop muted playsinline width="100%"></video>
+  <img src="demo.gif" alt="Greenlighting Agent Demo" width="100%"/>
   <br/>
   <sub>Courtesy: Replit Free Agent Day</sub>
 </div>
