@@ -114,9 +114,14 @@ def format_analysis_summary(results: Dict[str, Any]) -> str:
             summary_lines.append(f"Confidence: {confidence_to_text(confidence)} ({confidence:.1%})")
             
             metadata = result.get('metadata', {})
-            if metadata:
+            display_metadata = {
+                key: value
+                for key, value in metadata.items()
+                if key != "model_usage"
+            }
+            if display_metadata:
                 summary_lines.append("\nKey Metrics:")
-                for key, value in metadata.items():
+                for key, value in display_metadata.items():
                     summary_lines.append(f"  • {key}: {value}")
     
     summary_lines.append("\n" + "=" * 60)

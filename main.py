@@ -15,10 +15,12 @@ from typing import Dict, Any
 from agents.master_agent import MasterOrchestratorAgent
 from config import OUTPUT_DIR, print_config_summary
 from utils.sample_data import SAMPLE_PROJECT
+from tools.tmdb_tools import tmdb_client
 from utils.helpers import (
     print_header, print_success, print_error, print_info, print_warning,
     sanitize_filename, extract_project_name, get_timestamp, format_currency
 )
+from utils.run_ledger import save_run_ledger
 
 
 class GreenlightingCLI:
@@ -62,12 +64,18 @@ class GreenlightingCLI:
             'target_audience': target_audience,
             'demo_mode': demo_mode,
         }
+        requested_project_data = dict(project_data)
         
+        tmdb_client.reset_usage_metrics()
+
         # Run analysis
         results = await self.master_agent.analyze(project_data)
+        results["requested_project_data"] = requested_project_data
         
         # Generate report
         report_path = self._save_report(results)
+        ledger_path = save_run_ledger(results, report_path)
+        results["run_ledger_path"] = str(ledger_path)
         
         # Display results
         self._display_results(results, report_path)
@@ -290,6 +298,8 @@ class GreenlightingCLI:
         print_info(f"Confidence: {final_rec['confidence']:.1%}")
         print()
         print(f"📝 Full report saved to: {report_path}")
+        if results.get("run_ledger_path"):
+            print(f"📒 Run ledger saved to: {results['run_ledger_path']}")
         print()
     
     async def interactive_mode(self):

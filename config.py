@@ -15,6 +15,8 @@ load_dotenv(BASE_DIR / ".env", override=True)
 
 OUTPUT_DIR = Path(os.getenv("OUTPUT_DIR", "outputs/reports"))
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+RUNS_DIR = Path(os.getenv("RUNS_DIR", "outputs/runs"))
+RUNS_DIR.mkdir(parents=True, exist_ok=True)
 
 # API Keys
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
@@ -23,6 +25,12 @@ TMDB_API_KEY = os.getenv("TMDB_API_KEY")
 # Model Configuration
 MODEL_NAME = os.getenv("MODEL_NAME", "claude-sonnet-4-5-20250929")
 MAX_TOKENS = int(os.getenv("MAX_TOKENS", "4096"))
+ANTHROPIC_INPUT_PRICE_PER_MILLION = float(
+    os.getenv("ANTHROPIC_INPUT_PRICE_PER_MILLION", "3.0")
+)
+ANTHROPIC_OUTPUT_PRICE_PER_MILLION = float(
+    os.getenv("ANTHROPIC_OUTPUT_PRICE_PER_MILLION", "15.0")
+)
 
 # Logging
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
@@ -172,4 +180,5 @@ def print_config_summary():
     """Print a concise configuration summary for CLI runs."""
     print("Configuration loaded successfully")
     print(f"Output directory: {OUTPUT_DIR}")
+    print(f"Run ledger directory: {RUNS_DIR}")
     print(f"Model: {MODEL_NAME}")

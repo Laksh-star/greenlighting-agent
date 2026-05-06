@@ -53,6 +53,7 @@ class MasterOrchestratorAgent(BaseAgent):
         Returns:
             Final greenlight recommendation with all supporting analysis
         """
+        self._reset_run_usage_metrics()
         print_header("🎬 GREENLIGHTING ANALYSIS STARTING")
         print_info(f"Project: {project_data.get('description', 'Untitled')[:100]}")
         print_info(f"Budget: ${project_data.get('budget', 0):,}")
@@ -72,7 +73,24 @@ class MasterOrchestratorAgent(BaseAgent):
             "project_data": project_data,
             "subagent_results": results,
             "final_recommendation": final_recommendation,
+            "usage_summary": self.get_all_usage_summaries(),
             "timestamp": self._get_timestamp()
+        }
+
+    def _reset_run_usage_metrics(self):
+        """Reset master and subagent usage before each analysis run."""
+        self.reset_usage_metrics()
+        for agent in self.subagents.values():
+            agent.reset_usage_metrics()
+
+    def get_all_usage_summaries(self) -> Dict[str, Any]:
+        """Return usage summaries for master synthesis and every subagent."""
+        return {
+            "master_orchestrator": self.get_usage_summary(),
+            "subagents": {
+                name: agent.get_usage_summary()
+                for name, agent in self.subagents.items()
+            },
         }
     
     async def _run_subagent_analyses(
@@ -141,6 +159,8 @@ class MasterOrchestratorAgent(BaseAgent):
         """Run a single subagent analysis with error handling."""
         try:
             result = await agent.analyze(project_data)
+            result.setdefault("metadata", {})
+            result["metadata"]["model_usage"] = agent.get_usage_summary()
             return name, result
             
         except Exception as e:
@@ -149,7 +169,10 @@ class MasterOrchestratorAgent(BaseAgent):
                 "agent": agent.name,
                 "error": str(e),
                 "confidence": 0.0,
-                "findings": f"Analysis failed: {str(e)}"
+                "findings": f"Analysis failed: {str(e)}",
+                "metadata": {
+                    "model_usage": agent.get_usage_summary(),
+                },
             }
     
     async def _synthesize_recommendation(
@@ -212,6 +235,7 @@ class MasterOrchestratorAgent(BaseAgent):
             "analysis": recommendation_text,
             "summary": self._extract_summary(recommendation_text),
             "decision_drivers": self._extract_decision_drivers(recommendation_text, results),
+            "model_usage": self.get_usage_summary(),
         }
 
     def _demo_recommendation(self, results: Dict[str, Any]) -> Dict[str, Any]:
@@ -238,6 +262,7 @@ class MasterOrchestratorAgent(BaseAgent):
                 "The budget is moderate enough to protect downside risk.",
                 "Original sci-fi still needs strong reviews and precise positioning.",
             ],
+            "model_usage": self.get_usage_summary(),
         }
     
     def _categorize_recommendation(

@@ -114,6 +114,7 @@ The agent will:
 2. Show real-time progress
 3. Synthesize a final recommendation
 4. Generate a comprehensive markdown report in `outputs/reports/` with decision drivers, comparable evidence, financial scenarios, and a risk matrix
+5. Save a run ledger in `outputs/runs/` with token usage, estimated Anthropic cost, TMDB request counts, and the report path
 
 ### Recommendation Types
 - **GO** ✅ - Strong greenlight, proceed with production
@@ -150,6 +151,7 @@ The agent will:
 2. Compare recommendations for different budget levels
 3. Test how platform choice (theatrical vs streaming) affects analysis
 4. Review the generated reports in `outputs/reports/`
+5. Review run ledgers in `outputs/runs/`
 
 ## Tips
 
@@ -163,5 +165,6 @@ The agent will:
 - Check the main README.md for full documentation
 - Review example projects above
 - Check the `outputs/reports/` folder for sample reports
+- Check the `outputs/runs/` folder for token/cost ledgers
 
 Happy greenlighting! 🎬

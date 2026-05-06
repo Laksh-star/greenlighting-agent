@@ -193,6 +193,12 @@ The agent generates comprehensive reports including:
 
 Reports saved to: `outputs/reports/project_name_YYYYMMDD_HHMMSS.md`
 
+Each run also writes an audit ledger to `outputs/runs/project_name_YYYYMMDD_HHMMSS_run.json` with:
+- project input and report path
+- model used and per-agent token usage
+- estimated Anthropic cost
+- TMDB request counts and endpoints
+
 ## 🛠️ Development
 
 ### Adding New Subagents

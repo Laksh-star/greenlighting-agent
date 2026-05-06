@@ -17,6 +17,8 @@ class TMDBClient:
         self.session = requests.Session()
         self.rate_limit_delay = 0.25  # 4 requests per second max
         self.last_request_time = 0
+        self.request_count = 0
+        self.request_log: List[Dict[str, Any]] = []
     
     def _rate_limit(self):
         """Implement rate limiting."""
@@ -34,6 +36,15 @@ class TMDBClient:
         url = f"{self.base_url}{endpoint}"
         params = params or {}
         params['api_key'] = self.api_key
+        self.request_count += 1
+        self.request_log.append({
+            "endpoint": endpoint,
+            "params": {
+                key: value
+                for key, value in params.items()
+                if key != "api_key"
+            },
+        })
         
         try:
             response = self.session.get(url, params=params)
@@ -41,6 +52,23 @@ class TMDBClient:
             return response.json()
         except requests.exceptions.RequestException as e:
             raise Exception(f"TMDB API error: {str(e)}")
+
+    def reset_usage_metrics(self):
+        """Reset captured TMDB request counts."""
+        self.request_count = 0
+        self.request_log = []
+
+    def get_usage_summary(self) -> Dict[str, Any]:
+        """Return captured TMDB request metrics."""
+        endpoints = {}
+        for request in self.request_log:
+            endpoint = request["endpoint"]
+            endpoints[endpoint] = endpoints.get(endpoint, 0) + 1
+        return {
+            "request_count": self.request_count,
+            "endpoints": endpoints,
+            "requests": list(self.request_log),
+        }
 
     def enrich_comparable_titles(self, titles: List[str]) -> List[Dict[str, Any]]:
         """Resolve comparable titles into compact evidence rows."""

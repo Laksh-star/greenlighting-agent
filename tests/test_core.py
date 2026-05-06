@@ -13,6 +13,7 @@ from agents.market_research import MarketResearchAgent
 from agents.master_agent import MasterOrchestratorAgent
 from main import GreenlightingCLI, parse_comparables
 from tools.tmdb_tools import TMDBClient
+from utils.run_ledger import build_run_ledger, summarize_model_usage
 
 
 class FakeAgent(BaseAgent):
@@ -131,6 +132,52 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
         self.assertIn("TMDB enrichment unavailable", report)
         self.assertIn("| Arrival | n/a | $0 | $0 | 0% | 0.0 | input only |", report)
 
+    def test_run_ledger_summarizes_usage_and_cost(self):
+        results = {
+            "project_data": {
+                "description": "Test",
+                "demo_mode": False,
+                "market_analysis": {"large": "derived"},
+            },
+            "requested_project_data": {"description": "Test", "demo_mode": False},
+            "final_recommendation": {
+                "recommendation": "GO",
+                "confidence": 0.9,
+            },
+            "usage_summary": {
+                "master_orchestrator": {
+                    "call_count": 1,
+                    "models": ["claude-sonnet-4-5-20250929"],
+                    "input_tokens": 100,
+                    "output_tokens": 50,
+                    "cache_creation_input_tokens": 0,
+                    "cache_read_input_tokens": 0,
+                    "events": [],
+                },
+                "subagents": {
+                    "market_research": {
+                        "call_count": 1,
+                        "models": ["claude-sonnet-4-5-20250929"],
+                        "input_tokens": 200,
+                        "output_tokens": 75,
+                        "cache_creation_input_tokens": 0,
+                        "cache_read_input_tokens": 0,
+                        "events": [],
+                    }
+                },
+            },
+        }
+
+        usage = summarize_model_usage(results)
+        ledger = build_run_ledger(results, Path("outputs/reports/test.md"))
+
+        self.assertEqual(usage["totals"]["call_count"], 2)
+        self.assertEqual(usage["totals"]["input_tokens"], 300)
+        self.assertEqual(usage["totals"]["output_tokens"], 125)
+        self.assertEqual(ledger["estimated_anthropic_cost"]["billable_input_tokens"], 300)
+        self.assertEqual(ledger["report_path"], "outputs/reports/test.md")
+        self.assertNotIn("market_analysis", ledger["project"])
+
     def test_tmdb_comparable_enrichment_with_mocked_responses(self):
         client = TMDBClient()
 
@@ -169,7 +216,9 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
 
         self.assertEqual(result.returncode, 0, msg=result.stderr)
         self.assertIn("RECOMMENDATION", result.stdout)
+        self.assertIn("Run ledger saved to", result.stdout)
         self.assertTrue(list((repo / "outputs" / "reports").glob("*.md")))
+        self.assertTrue(list((repo / "outputs" / "runs").glob("*.json")))
 
 
 if __name__ == "__main__":

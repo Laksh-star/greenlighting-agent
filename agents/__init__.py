@@ -35,6 +35,7 @@ class BaseAgent(ABC):
         self.tools = tools or []
         self.client = None
         self.conversation_history: List[Dict] = []
+        self.usage_events: List[Dict[str, Any]] = []
         
     @abstractmethod
     async def analyze(self, project_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -80,9 +81,59 @@ class BaseAgent(ABC):
                 temperature=temperature,
                 stream=stream
             )
+            if not stream:
+                self._record_usage(response)
             return response
         except Exception as e:
             raise Exception(f"Error calling Claude API: {str(e)}")
+
+    def _record_usage(self, response: Any):
+        """Capture usage metadata from a Claude response."""
+        usage = getattr(response, "usage", None)
+        event = {
+            "model": getattr(response, "model", MODEL_NAME),
+            "input_tokens": getattr(usage, "input_tokens", 0) if usage else 0,
+            "output_tokens": getattr(usage, "output_tokens", 0) if usage else 0,
+            "cache_creation_input_tokens": getattr(
+                usage,
+                "cache_creation_input_tokens",
+                0,
+            ) if usage else 0,
+            "cache_read_input_tokens": getattr(
+                usage,
+                "cache_read_input_tokens",
+                0,
+            ) if usage else 0,
+            "service_tier": getattr(usage, "service_tier", None) if usage else None,
+        }
+        self.usage_events.append(event)
+
+    def reset_usage_metrics(self):
+        """Reset usage captured for this agent instance."""
+        self.usage_events = []
+
+    def get_usage_summary(self) -> Dict[str, Any]:
+        """Summarize Claude usage captured for this agent."""
+        input_tokens = sum(event.get("input_tokens", 0) for event in self.usage_events)
+        output_tokens = sum(event.get("output_tokens", 0) for event in self.usage_events)
+        cache_creation_input_tokens = sum(
+            event.get("cache_creation_input_tokens", 0)
+            for event in self.usage_events
+        )
+        cache_read_input_tokens = sum(
+            event.get("cache_read_input_tokens", 0)
+            for event in self.usage_events
+        )
+        models = sorted({event.get("model") for event in self.usage_events if event.get("model")})
+        return {
+            "call_count": len(self.usage_events),
+            "models": models,
+            "input_tokens": input_tokens,
+            "output_tokens": output_tokens,
+            "cache_creation_input_tokens": cache_creation_input_tokens,
+            "cache_read_input_tokens": cache_read_input_tokens,
+            "events": list(self.usage_events),
+        }
     
     def add_to_history(self, role: str, content: str):
         """Add a message to conversation history."""
