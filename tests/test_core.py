@@ -1,6 +1,7 @@
 """Core regression tests for the runnable demo path."""
 
 import asyncio
+import json
 import subprocess
 import sys
 import unittest
@@ -13,6 +14,7 @@ from agents.market_research import MarketResearchAgent
 from agents.master_agent import MasterOrchestratorAgent
 from main import GreenlightingCLI, parse_comparables
 from tools.tmdb_tools import TMDBClient
+from utils.analysis_report import build_analysis_payload
 from utils.run_ledger import build_run_ledger, summarize_model_usage
 
 
@@ -132,6 +134,61 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
         self.assertIn("TMDB enrichment unavailable", report)
         self.assertIn("| Arrival | n/a | $0 | $0 | 0% | 0.0 | input only |", report)
 
+    def test_structured_analysis_payload_has_core_fields(self):
+        results = {
+            "requested_project_data": {"description": "Test project"},
+            "project_data": {"description": "Mutated project"},
+            "final_recommendation": {
+                "recommendation": "CONDITIONAL GO",
+                "confidence": 0.8,
+                "summary": "Test summary",
+                "analysis": "Test analysis",
+                "decision_drivers": ["Driver"],
+            },
+            "subagent_results": {
+                "market_research": {
+                    "agent": "Market Research Agent",
+                    "role": "market",
+                    "confidence": 0.8,
+                    "findings": "Market findings",
+                    "metadata": {
+                        "comparable_evidence": [{"title": "Arrival"}],
+                    },
+                },
+                "financial_model": {
+                    "agent": "Financial Modeling Agent",
+                    "confidence": 0.8,
+                    "findings": "Finance findings",
+                    "metadata": {
+                        "basic_metrics": {"moderate_roi": 42},
+                    },
+                },
+                "risk_analysis": {
+                    "agent": "Risk Analysis Agent",
+                    "confidence": 0.8,
+                    "findings": "Risk findings",
+                    "metadata": {
+                        "overall_risk_score": 5.5,
+                        "risk_level": "Medium Risk",
+                        "risk_factors": {"budget_risk": 5},
+                    },
+                },
+            },
+        }
+
+        payload = build_analysis_payload(
+            results,
+            Path("outputs/reports/test.md"),
+            Path("outputs/runs/test_run.json"),
+        )
+
+        self.assertEqual(payload["project"]["description"], "Test project")
+        self.assertEqual(payload["recommendation"], "CONDITIONAL GO")
+        self.assertEqual(payload["comparable_evidence"][0]["title"], "Arrival")
+        self.assertEqual(payload["financial_scenarios"]["moderate_roi"], 42)
+        self.assertEqual(payload["risk_matrix"]["risk_level"], "Medium Risk")
+        self.assertEqual(payload["run_ledger_path"], "outputs/runs/test_run.json")
+
     def test_run_ledger_summarizes_usage_and_cost(self):
         results = {
             "project_data": {
@@ -216,8 +273,15 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
 
         self.assertEqual(result.returncode, 0, msg=result.stderr)
         self.assertIn("RECOMMENDATION", result.stdout)
+        self.assertIn("Structured JSON saved to", result.stdout)
         self.assertIn("Run ledger saved to", result.stdout)
         self.assertTrue(list((repo / "outputs" / "reports").glob("*.md")))
+        json_reports = list((repo / "outputs" / "reports").glob("*.json"))
+        self.assertTrue(json_reports)
+        with open(json_reports[-1], "r") as f:
+            payload = json.load(f)
+        self.assertIn("recommendation", payload)
+        self.assertIn("run_ledger_path", payload)
         self.assertTrue(list((repo / "outputs" / "runs").glob("*.json")))
 
 

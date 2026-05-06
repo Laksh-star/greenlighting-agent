@@ -20,6 +20,7 @@ from utils.helpers import (
     print_header, print_success, print_error, print_info, print_warning,
     sanitize_filename, extract_project_name, get_timestamp, format_currency
 )
+from utils.analysis_report import save_analysis_json
 from utils.run_ledger import save_run_ledger
 
 
@@ -76,6 +77,8 @@ class GreenlightingCLI:
         report_path = self._save_report(results)
         ledger_path = save_run_ledger(results, report_path)
         results["run_ledger_path"] = str(ledger_path)
+        analysis_json_path = save_analysis_json(results, report_path, ledger_path)
+        results["analysis_json_path"] = str(analysis_json_path)
         
         # Display results
         self._display_results(results, report_path)
@@ -298,6 +301,8 @@ class GreenlightingCLI:
         print_info(f"Confidence: {final_rec['confidence']:.1%}")
         print()
         print(f"📝 Full report saved to: {report_path}")
+        if results.get("analysis_json_path"):
+            print(f"🧾 Structured JSON saved to: {results['analysis_json_path']}")
         if results.get("run_ledger_path"):
             print(f"📒 Run ledger saved to: {results['run_ledger_path']}")
         print()

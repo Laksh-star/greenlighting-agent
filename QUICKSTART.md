@@ -113,7 +113,7 @@ The agent will:
 1. Run 6 specialized subagent analyses
 2. Show real-time progress
 3. Synthesize a final recommendation
-4. Generate a comprehensive markdown report in `outputs/reports/` with decision drivers, comparable evidence, financial scenarios, and a risk matrix
+4. Generate Markdown and structured JSON reports in `outputs/reports/`
 5. Save a run ledger in `outputs/runs/` with token usage, estimated Anthropic cost, TMDB request counts, and the report path
 
 ### Recommendation Types

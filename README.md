@@ -191,7 +191,9 @@ The agent generates comprehensive reports including:
 8. **Risk Matrix** - Identified risks with mitigation strategies
 9. **Final Recommendation** - Go/No-Go with confidence level
 
-Reports saved to: `outputs/reports/project_name_YYYYMMDD_HHMMSS.md`
+Reports saved to:
+- `outputs/reports/project_name_YYYYMMDD_HHMMSS.md` for human-readable Markdown
+- `outputs/reports/project_name_YYYYMMDD_HHMMSS.json` for structured downstream use
 
 Each run also writes an audit ledger to `outputs/runs/project_name_YYYYMMDD_HHMMSS_run.json` with:
 - project input and report path
