@@ -30,27 +30,22 @@ def test_imports():
 
 
 def test_config():
-    """Test configuration and API keys."""
+    """Test configuration can load without requiring API keys."""
     print("\nTesting configuration...")
     
     try:
         import config
         print(f"  ✓ Configuration loaded")
         
-        # Check API keys (without printing them)
-        if config.ANTHROPIC_API_KEY and config.ANTHROPIC_API_KEY != "your_anthropic_api_key_here":
+        if config.ANTHROPIC_API_KEY:
             print(f"  ✓ Anthropic API key configured")
         else:
-            print(f"  ✗ Anthropic API key NOT configured")
-            print(f"    → Edit .env and add your ANTHROPIC_API_KEY")
-            return False
-        
-        if config.TMDB_API_KEY and config.TMDB_API_KEY != "your_tmdb_api_key_here":
+            print(f"  • Anthropic API key not configured; --sample still works")
+
+        if config.TMDB_API_KEY:
             print(f"  ✓ TMDB API key configured")
         else:
-            print(f"  ✗ TMDB API key NOT configured")
-            print(f"    → Edit .env and add your TMDB_API_KEY")
-            return False
+            print(f"  • TMDB API key not configured; comparable enrichment will be skipped")
         
         print(f"  ✓ Model: {config.MODEL_NAME}")
         print(f"  ✓ Output dir: {config.OUTPUT_DIR}")
@@ -94,7 +89,7 @@ def test_agents():
 
 
 def test_tools():
-    """Test TMDB tools."""
+    """Test TMDB tools can initialize; live calls require a key."""
     print("\nTesting TMDB tools...")
     
     try:
@@ -102,10 +97,13 @@ def test_tools():
         client = TMDBClient()
         print(f"  ✓ TMDB Client initialized")
         
-        # Try a simple API call
         try:
-            genres = client.get_genre_list()
-            print(f"  ✓ TMDB API connection successful ({len(genres)} genres found)")
+            from config import TMDB_API_KEY
+            if TMDB_API_KEY:
+                genres = client.get_genre_list()
+                print(f"  ✓ TMDB API connection successful ({len(genres)} genres found)")
+            else:
+                print(f"  • TMDB API key not configured; skipped live API call")
             return True
         except Exception as e:
             print(f"  ✗ TMDB API call failed: {str(e)}")
@@ -168,7 +166,7 @@ def main():
     if all_passed:
         print("\n🎉 All tests passed! You're ready to run the agent.")
         print("\nTry this command:")
-        print('  python main.py --interactive')
+        print('  python main.py --sample')
         return 0
     else:
         print("\n⚠️  Some tests failed. Please fix the issues above.")

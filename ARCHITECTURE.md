@@ -181,7 +181,8 @@ Final Recommendation
         recommendation: GO/CONDITIONAL/NO-GO,
         confidence: 0-1,
         analysis: detailed text,
-        summary: executive summary
+        summary: executive summary,
+        decision_drivers: array
     }
 ```
 
@@ -236,6 +237,7 @@ The agent uses a `CLAUDE.md` file to maintain persistent context:
 - Search movies by title
 - Get detailed movie information
 - Fetch box office data
+- Enrich supplied comparable titles for reports
 - Find comparable titles
 - Analyze genre performance
 
@@ -431,15 +433,16 @@ docker run -it greenlighting-agent
 
 ### Phase 1 (Current)
 - ✅ Core architecture
-- ✅ 3 subagents
-- ✅ TMDB integration
-- ✅ Basic reporting
+- ✅ 6 subagents
+- ✅ TMDB comparable enrichment
+- ✅ No-key sample mode
+- ✅ Structured markdown reporting
 
 ### Phase 2 (Next)
-- [ ] Remaining 4 subagents
 - [ ] MCP server implementation
 - [ ] Advanced financial models
 - [ ] Social sentiment integration
+- [ ] Web/API interface
 
 ### Phase 3
 - [ ] Web interface

@@ -5,6 +5,8 @@ Market Research Agent - Analyzes comparable titles, box office trends, and strea
 from typing import Dict, Any
 from agents import BaseAgent
 from utils.prompt_templates import MARKET_RESEARCH_PROMPT
+from utils.sample_data import SAMPLE_COMPARABLE_EVIDENCE
+from tools.tmdb_tools import tmdb_client
 
 
 class MarketResearchAgent(BaseAgent):
@@ -31,6 +33,32 @@ class MarketResearchAgent(BaseAgent):
         budget = project_data.get('budget', 0)
         description = project_data.get('description', '')
         comparables = project_data.get('comparables', [])
+        comparable_evidence = project_data.get("comparable_evidence")
+
+        if project_data.get("demo_mode"):
+            comparable_evidence = comparable_evidence or SAMPLE_COMPARABLE_EVIDENCE
+            findings = self._demo_findings(genre, budget, comparable_evidence)
+            return self.format_result(
+                findings=findings,
+                confidence=0.88,
+                metadata={
+                    "genre": genre,
+                    "budget_category": self._categorize_budget(budget),
+                    "comparables_count": len(comparable_evidence),
+                    "comparable_evidence": comparable_evidence,
+                },
+            )
+
+        if comparables and comparable_evidence is None:
+            try:
+                comparable_evidence = tmdb_client.enrich_comparable_titles(comparables)
+            except Exception as exc:
+                comparable_evidence = self._fallback_comparable_evidence(comparables)
+                project_data["market_data_warning"] = f"TMDB enrichment unavailable: {exc}"
+
+        comparable_evidence = comparable_evidence or self._fallback_comparable_evidence(comparables)
+
+        project_data["comparable_evidence"] = comparable_evidence
         
         # Build analysis prompt
         user_message = f"""
@@ -41,6 +69,7 @@ Analyze the market viability for this project:
 **Genre:** {genre}
 **Estimated Budget:** ${budget:,}
 **Comparable Titles:** {', '.join(comparables) if comparables else 'None provided'}
+**Comparable Evidence:** {self._format_comparable_evidence(comparable_evidence or [])}
 
 Please provide:
 1. Current market trends for this genre
@@ -68,6 +97,8 @@ Base your analysis on recent industry data and trends.
         confidence = 0.7  # Base confidence
         if comparables:
             confidence += 0.2
+        if comparable_evidence:
+            confidence += 0.1
         if budget > 0:
             confidence += 0.1
         confidence = min(confidence, 1.0)
@@ -78,8 +109,58 @@ Base your analysis on recent industry data and trends.
             metadata={
                 "genre": genre,
                 "budget_category": self._categorize_budget(budget),
-                "comparables_count": len(comparables)
+                "comparables_count": len(comparable_evidence or comparables),
+                "comparable_evidence": comparable_evidence,
+                "market_data_warning": project_data.get("market_data_warning", ""),
             }
+        )
+
+    def _fallback_comparable_evidence(self, comparables: list) -> list:
+        """Create reportable fallback rows when live enrichment is unavailable."""
+        return [
+            {
+                "title": title,
+                "year": "n/a",
+                "budget": 0,
+                "revenue": 0,
+                "roi": 0.0,
+                "rating": 0,
+                "popularity": 0,
+                "similar_titles": [],
+                "source": "input only",
+            }
+            for title in comparables
+        ]
+
+    def _format_comparable_evidence(self, comparable_evidence: list) -> str:
+        """Format comparable rows for the LLM prompt."""
+        if not comparable_evidence:
+            return "No comparable evidence available."
+
+        rows = []
+        for item in comparable_evidence:
+            rows.append(
+                f"- {item.get('title', 'Unknown')} ({item.get('year', 'n/a')}): "
+                f"budget ${item.get('budget', 0):,}, revenue ${item.get('revenue', 0):,}, "
+                f"ROI {item.get('roi', 0)}%, rating {item.get('rating', 0):.1f}, "
+                f"popularity {item.get('popularity', 0):.1f}"
+            )
+        return "\n".join(rows)
+
+    def _demo_findings(self, genre: str, budget: int, comparable_evidence: list) -> str:
+        """Return deterministic market findings for sample mode."""
+        avg_revenue = sum(item.get("revenue", 0) for item in comparable_evidence) / max(
+            len(comparable_evidence), 1
+        )
+        return (
+            f"The {genre} package is viable as a contained, mid-budget genre project. "
+            f"Comparable titles average about ${avg_revenue:,.0f} in reported worldwide "
+            f"revenue, with strongest upside when the concept has a clean hook and premium "
+            f"critical positioning. At a ${budget:,} budget, the project sits below the "
+            f"largest comparable while keeping enough scale for theatrical marketing. "
+            "Market risk is moderate: original sci-fi is selective, but contained AI and "
+            "space-thriller concepts remain legible to adult audiences and stream well after "
+            "release."
         )
     
     def _categorize_budget(self, budget: int) -> str:

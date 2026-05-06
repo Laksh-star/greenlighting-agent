@@ -45,7 +45,7 @@ greenlighting-agent/
 
 ### 🎯 Core System
 A **multi-agent AI system** that analyzes film/TV projects for greenlight decisions using:
-- **7 specialized subagents** (3 implemented, 4 planned)
+- **6 specialized subagents** plus master orchestration
 - **Parallel processing** for efficient analysis
 - **Real-time progress tracking**
 - **Comprehensive markdown reports**
@@ -56,6 +56,9 @@ A **multi-agent AI system** that analyzes film/TV projects for greenlight decisi
 2. **Market Research Agent** - Analyzes comparables, trends, market viability
 3. **Financial Modeling Agent** - Creates revenue projections, ROI models
 4. **Risk Analysis Agent** - Identifies and assesses all risk categories
+5. **Audience Intelligence Agent** - Assesses audience and platform fit
+6. **Competitive Analysis Agent** - Maps positioning and release-window risk
+7. **Creative Assessment Agent** - Reviews concept clarity and execution difficulty
 
 ### 📊 Analysis Capabilities
 
@@ -69,11 +72,10 @@ A **multi-agent AI system** that analyzes film/TV projects for greenlight decisi
 - Platform-specific modeling
 
 **Planned (Phase 2):**
-- Social sentiment analysis
-- Audience intelligence
-- Competitive landscape mapping
-- Creative assessment
+- Social sentiment integration
+- MCP server packaging
 - Awards potential prediction
+- Web or API surface
 
 ### 🔧 Technical Features
 
@@ -91,7 +93,7 @@ A **multi-agent AI system** that analyzes film/TV projects for greenlight decisi
 **Rating:** HIGH COMPLEXITY (#2 in entertainment use cases)
 
 **Justification:**
-- 7 specialized subagents (most of any use case)
+- 6 specialized subagents plus master synthesis
 - Multi-domain synthesis (market + finance + risk + creative)
 - Real business-critical decisions ($millions at stake)
 - External API integrations
@@ -136,7 +138,8 @@ Breakdown:
 
 ### Quick Analysis
 ```bash
-python main.py --project "Description" --budget 50000000
+python main.py --sample
+python main.py --project "Description" --budget 50000000 --comparables "Arrival,Ex Machina"
 ```
 
 ### Interactive Mode
@@ -158,7 +161,7 @@ python main.py --batch projects.json
 - **All 7 agents (when complete):** ~30-60 seconds
 
 ### API Calls
-- **Per analysis:** 10-20 TMDB calls, 3-7 Claude calls
+- **Per live analysis:** TMDB calls for supplied comparables, 6-7 Claude calls
 - **Rate limits:** Well within TMDB (40/10s) and Anthropic limits
 
 ### Cost Estimate
@@ -188,10 +191,10 @@ Easy to add new agents, tools, and data sources.
 ## Next Steps for Development
 
 ### Immediate (Phase 2)
-1. Implement remaining 4 subagents
-2. Add MCP server for TMDB
-3. Enhance financial models
-4. Add social sentiment analysis
+1. Add MCP server packaging for TMDB workflows
+2. Enhance financial models
+3. Add social sentiment analysis
+4. Add web/API surface
 
 ### Medium Term (Phase 3)
 1. Build web interface
@@ -272,7 +275,7 @@ This project demonstrates:
 - Add testing suite
 
 ### Most Impressive Aspect
-**The multi-agent synthesis** - watching 3-7 specialized AI agents work in parallel and then having a master agent synthesize their findings into a single coherent recommendation is genuinely impressive.
+**The multi-agent synthesis** - watching specialized AI agents work together and then having a master agent synthesize their findings into a single coherent recommendation is genuinely impressive.
 
 ---
 

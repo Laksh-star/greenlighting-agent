@@ -2,7 +2,13 @@
 
 ## Setup (5 minutes)
 
-### 1. Get Your API Keys
+You can run the sample demo without API keys:
+
+```bash
+python main.py --sample
+```
+
+### 1. Get Your API Keys For Live Analysis
 
 #### Anthropic API Key
 1. Go to https://console.anthropic.com
@@ -37,7 +43,7 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### 3. Configure Environment
+### 3. Configure Environment For Live Analysis
 
 ```bash
 # Copy the example env file
@@ -58,8 +64,14 @@ nano .env
 ### Quick Test
 
 ```bash
-# Run a quick analysis
-python main.py --project "A sci-fi thriller about AI rebellion in 2045" --budget 50000000 --genre "Science Fiction"
+# Run the no-key sample analysis
+python main.py --sample
+```
+
+### Live Analysis With Comparables
+
+```bash
+python main.py --project "A sci-fi thriller about AI rebellion in 2045" --budget 50000000 --genre "Science Fiction" --platform "theatrical" --comparables "Arrival,Ex Machina,The Creator" --target-audience "adults 18-49"
 ```
 
 ### Interactive Mode (Recommended)
@@ -70,38 +82,38 @@ python main.py --interactive
 
 # Then use commands like:
 > /analyze-script A gritty crime drama set in 1970s New York, following a detective investigating corruption
-# (You'll be prompted for budget, genre, etc.)
+# (You'll be prompted for budget, genre, platform, comparables, and audience)
 ```
 
 ### Example Projects to Test
 
 #### 1. Low Budget Horror
 ```bash
-python main.py --project "Found footage horror film about paranormal investigators in an abandoned asylum" --budget 2000000 --genre "Horror" --platform "theatrical"
+python main.py --project "Found footage horror film about paranormal investigators in an abandoned asylum" --budget 2000000 --genre "Horror" --platform "theatrical" --comparables "Paranormal Activity,Host"
 ```
 
 #### 2. Streaming Comedy
 ```bash
-python main.py --project "Rom-com about a wedding planner who falls for the groom. Think 27 Dresses meets The Wedding Planner" --budget 15000000 --genre "Comedy" --platform "streaming"
+python main.py --project "Rom-com about a wedding planner who falls for the groom. Think 27 Dresses meets The Wedding Planner" --budget 15000000 --genre "Comedy" --platform "streaming" --target-audience "women 18-49, rom-com fans"
 ```
 
 #### 3. Prestige Drama
 ```bash
-python main.py --project "Biopic of a famous jazz musician during the civil rights era. Awards potential" --budget 35000000 --genre "Drama" --platform "hybrid"
+python main.py --project "Biopic of a famous jazz musician during the civil rights era. Awards potential" --budget 35000000 --genre "Drama" --platform "hybrid" --comparables "Ray,Walk the Line"
 ```
 
 #### 4. Tentpole Action
 ```bash
-python main.py --project "Superhero team-up film with established characters. Think Avengers-scale" --budget 200000000 --genre "Action" --platform "theatrical"
+python main.py --project "Superhero team-up film with established characters. Think Avengers-scale" --budget 200000000 --genre "Action" --platform "theatrical" --comparables "The Avengers,Justice League"
 ```
 
 ## Understanding the Output
 
 The agent will:
-1. Run 3-7 specialized subagent analyses in parallel
+1. Run 6 specialized subagent analyses
 2. Show real-time progress
 3. Synthesize a final recommendation
-4. Generate a comprehensive markdown report in `outputs/reports/`
+4. Generate a comprehensive markdown report in `outputs/reports/` with decision drivers, comparable evidence, financial scenarios, and a risk matrix
 
 ### Recommendation Types
 - **GO** ✅ - Strong greenlight, proceed with production
@@ -118,6 +130,7 @@ The agent will:
 ## Common Issues
 
 ### "ANTHROPIC_API_KEY not found"
+- Use `python main.py --sample` if you only want the no-key demo
 - Make sure you created the `.env` file (copy from `.env.example`)
 - Check that your API key is correctly formatted
 - Ensure no extra spaces around the `=` sign

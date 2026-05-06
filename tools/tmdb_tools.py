@@ -4,7 +4,7 @@ TMDB (The Movie Database) API tools for fetching movie and TV show data.
 
 import requests
 from typing import Dict, Any, List, Optional
-from config import TMDB_API_KEY, TMDB_BASE_URL
+from config import TMDB_API_KEY, TMDB_BASE_URL, validate_config
 import time
 
 
@@ -28,6 +28,7 @@ class TMDBClient:
     
     def _make_request(self, endpoint: str, params: Optional[Dict] = None) -> Dict:
         """Make API request with rate limiting."""
+        validate_config(require_anthropic=False, require_tmdb=True)
         self._rate_limit()
         
         url = f"{self.base_url}{endpoint}"
@@ -40,6 +41,46 @@ class TMDBClient:
             return response.json()
         except requests.exceptions.RequestException as e:
             raise Exception(f"TMDB API error: {str(e)}")
+
+    def enrich_comparable_titles(self, titles: List[str]) -> List[Dict[str, Any]]:
+        """Resolve comparable titles into compact evidence rows."""
+        enriched = []
+        for title in titles:
+            matches = self.search_movie(title)
+            if not matches:
+                enriched.append({
+                    "title": title,
+                    "year": "n/a",
+                    "budget": 0,
+                    "revenue": 0,
+                    "roi": 0.0,
+                    "rating": 0,
+                    "popularity": 0,
+                    "similar_titles": []
+                })
+                continue
+
+            movie = matches[0]
+            details = self.get_movie_details(movie["id"])
+            similar = self.get_similar_movies(movie["id"])[:3]
+            budget = details.get("budget", 0) or 0
+            revenue = details.get("revenue", 0) or 0
+            enriched.append({
+                "title": details.get("title", movie.get("title", title)),
+                "year": (details.get("release_date") or "")[:4] or "n/a",
+                "budget": budget,
+                "revenue": revenue,
+                "roi": self._calculate_roi(budget, revenue),
+                "rating": details.get("vote_average", movie.get("vote_average", 0)) or 0,
+                "popularity": details.get("popularity", movie.get("popularity", 0)) or 0,
+                "similar_titles": [
+                    item.get("title")
+                    for item in similar
+                    if item.get("title")
+                ]
+            })
+
+        return enriched
     
     def search_movie(self, query: str, year: Optional[int] = None) -> List[Dict]:
         """

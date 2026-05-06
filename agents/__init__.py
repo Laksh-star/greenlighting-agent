@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 import anthropic
-from config import ANTHROPIC_API_KEY, MODEL_NAME, MAX_TOKENS
+from config import ANTHROPIC_API_KEY, MODEL_NAME, MAX_TOKENS, validate_config
 
 
 class BaseAgent(ABC):
@@ -33,7 +33,7 @@ class BaseAgent(ABC):
         self.role = role
         self.system_prompt = system_prompt
         self.tools = tools or []
-        self.client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        self.client = None
         self.conversation_history: List[Dict] = []
         
     @abstractmethod
@@ -69,6 +69,9 @@ class BaseAgent(ABC):
             API response
         """
         try:
+            validate_config(require_anthropic=True, require_tmdb=False)
+            if self.client is None:
+                self.client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
             response = self.client.messages.create(
                 model=MODEL_NAME,
                 max_tokens=MAX_TOKENS,

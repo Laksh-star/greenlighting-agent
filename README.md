@@ -6,11 +6,11 @@
   <sub>Courtesy: Replit Free Agent Day</sub>
 </div>
 
-An AI-powered decision support system using Claude Agent SDK that helps studios and production companies evaluate whether to greenlight film and TV projects.
+An AI-powered decision support system that helps studios and production companies evaluate whether to greenlight film and TV projects.
 
 ## 🎯 What It Does
 
-The Greenlighting Agent conducts comprehensive analysis across 7 specialized domains:
+The Greenlighting Agent conducts comprehensive analysis across 6 implemented subagents plus master orchestration:
 
 1. **Market Research** - Comparable titles, box office trends, streaming performance
 2. **Audience Intelligence** - Demographics, social sentiment, fan communities  
@@ -23,15 +23,13 @@ The Greenlighting Agent conducts comprehensive analysis across 7 specialized dom
 ## 🏗️ Architecture
 
 ### Multi-Agent System
-- **7 Specialized Subagents** for domain-specific analysis
-- **MCP Integration** with TMDB, Box Office APIs, social sentiment
-- **Context Management** via CLAUDE.md for persistent project memory
-- **Streaming Mode** for real-time analysis updates
+- **6 Specialized Subagents** for domain-specific analysis
+- **TMDB API comparable enrichment** when a TMDB key is configured
+- **No-key sample mode** for deterministic local demos
 - **Slash Commands** for workflow control
 
 ### Technology Stack
-- **Claude Agent SDK** (Python)
-- **MCP Servers** for external integrations
+- **Anthropic Python SDK**
 - **TMDB API** for movie/TV data
 - **Anthropic API** (Claude Sonnet 4.5)
 - **Python 3.10+**
@@ -39,8 +37,8 @@ The Greenlighting Agent conducts comprehensive analysis across 7 specialized dom
 ## 📋 Prerequisites
 
 1. **Python 3.10 or higher**
-2. **Anthropic API Key** - Get from https://console.anthropic.com
-3. **TMDB API Key** - Get from https://www.themoviedb.org/settings/api
+2. **Anthropic API Key** - Required for full live analysis
+3. **TMDB API Key** - Optional, used for comparable-title enrichment
 4. **Git** (optional, for version control)
 
 ## 🚀 Installation
@@ -93,7 +91,13 @@ cp .env.example .env
 ### Basic Analysis
 
 ```bash
-python main.py --project "Sci-fi thriller about AI rebellion" --budget 50000000
+python main.py --project "Sci-fi thriller about AI rebellion" --budget 50000000 --genre "Science Fiction" --comparables "Arrival,Ex Machina,The Creator" --target-audience "adults 18-49"
+```
+
+### No-Key Sample Demo
+
+```bash
+python main.py --sample
 ```
 
 ### Interactive Mode
@@ -147,18 +151,13 @@ greenlighting-agent/
 │   ├── competitive.py       # Competitive analysis
 │   ├── creative_assess.py   # Creative assessment
 │   └── risk_analysis.py     # Risk analysis
-├── mcp_servers/
-│   ├── __init__.py
-│   ├── tmdb_server.py       # TMDB MCP integration
-│   └── box_office_server.py # Box office data (future)
 ├── tools/
 │   ├── __init__.py
 │   ├── tmdb_tools.py        # TMDB API wrapper
-│   ├── financial_calc.py    # Financial calculators
-│   └── report_generator.py  # Report formatting
 ├── utils/
 │   ├── __init__.py
 │   ├── prompt_templates.py  # Agent prompts
+│   ├── sample_data.py       # Offline demo fixture
 │   └── helpers.py           # Utility functions
 └── outputs/
     └── reports/             # Generated analysis reports
@@ -183,13 +182,14 @@ MODEL_NAME = "claude-opus-4-20250514"  # For more complex analysis
 The agent generates comprehensive reports including:
 
 1. **Executive Summary** - TL;DR recommendation
-2. **Market Analysis** - Comparable performance, trends
-3. **Audience Insights** - Demographics, sentiment
-4. **Financial Projections** - Revenue models, ROI estimates
-5. **Competitive Landscape** - Release timing, market gaps
-6. **Creative Evaluation** - Script/concept strengths
-7. **Risk Matrix** - Identified risks with mitigation strategies
-8. **Final Recommendation** - Go/No-Go with confidence level
+2. **Decision Drivers** - Top reasons behind the recommendation
+3. **Comparable Evidence Table** - Budget, revenue, ROI, rating, and similar-title signals
+4. **Financial Scenario Snapshot** - Conservative, moderate, and optimistic revenue/ROI
+5. **Audience Insights** - Demographics, platform fit, and audience demand
+6. **Competitive Landscape** - Release timing, market gaps
+7. **Creative Evaluation** - Script/concept strengths
+8. **Risk Matrix** - Identified risks with mitigation strategies
+9. **Final Recommendation** - Go/No-Go with confidence level
 
 Reports saved to: `outputs/reports/project_name_YYYYMMDD_HHMMSS.md`
 
@@ -202,11 +202,9 @@ Reports saved to: `outputs/reports/project_name_YYYYMMDD_HHMMSS.md`
 3. Implement `analyze()` method
 4. Register in `master_agent.py`
 
-### Adding MCP Servers
+### MCP Servers
 
-1. Create server file in `mcp_servers/`
-2. Implement MCP protocol handlers
-3. Register tools in agent configuration
+MCP server packaging is still a future integration. The current runnable path is a CLI app with direct TMDB API enrichment.
 
 ## 🐛 Troubleshooting
 
@@ -221,6 +219,8 @@ pip install -r requirements.txt
 ```
 
 ### API Key Issues
+`python main.py --sample` does not need API keys. Full live analysis requires `ANTHROPIC_API_KEY`; TMDB enrichment requires `TMDB_API_KEY`.
+
 ```bash
 # Check your .env file exists and has keys
 cat .env
@@ -235,7 +235,6 @@ python -c "from config import ANTHROPIC_API_KEY; print('Key loaded:', bool(ANTHR
 
 ## 📚 Resources
 
-- [Claude Agent SDK Docs](https://docs.claude.com/en/api/agent-sdk/overview)
 - [TMDB API Documentation](https://developer.themoviedb.org/docs)
 - [Anthropic API Reference](https://docs.anthropic.com/en/api)
 

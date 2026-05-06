@@ -7,30 +7,18 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
-load_dotenv()
-
 # Base directories
 BASE_DIR = Path(__file__).parent
+
+# Prefer this repo's .env for local runs, even if the shell has older keys.
+load_dotenv(BASE_DIR / ".env", override=True)
+
 OUTPUT_DIR = Path(os.getenv("OUTPUT_DIR", "outputs/reports"))
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # API Keys
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 TMDB_API_KEY = os.getenv("TMDB_API_KEY")
-
-# Validate required keys
-if not ANTHROPIC_API_KEY:
-    raise ValueError(
-        "ANTHROPIC_API_KEY not found in environment. "
-        "Please copy .env.example to .env and add your API key."
-    )
-
-if not TMDB_API_KEY:
-    raise ValueError(
-        "TMDB_API_KEY not found in environment. "
-        "Please copy .env.example to .env and add your TMDB API key."
-    )
 
 # Model Configuration
 MODEL_NAME = os.getenv("MODEL_NAME", "claude-sonnet-4-5-20250929")
@@ -162,12 +150,13 @@ def get_budget_category(budget: int) -> str:
             return category
     return "unknown"
 
-def validate_config():
-    """Validate that all required configuration is present."""
-    required = {
-        "ANTHROPIC_API_KEY": ANTHROPIC_API_KEY,
-        "TMDB_API_KEY": TMDB_API_KEY,
-    }
+def validate_config(require_anthropic: bool = True, require_tmdb: bool = True):
+    """Validate configuration only for the runtime paths that need keys."""
+    required = {}
+    if require_anthropic:
+        required["ANTHROPIC_API_KEY"] = ANTHROPIC_API_KEY
+    if require_tmdb:
+        required["TMDB_API_KEY"] = TMDB_API_KEY
     
     missing = [key for key, value in required.items() if not value]
     
@@ -179,9 +168,8 @@ def validate_config():
     
     return True
 
-# Validate on import
-validate_config()
-
-print(f"✅ Configuration loaded successfully")
-print(f"📁 Output directory: {OUTPUT_DIR}")
-print(f"🤖 Model: {MODEL_NAME}")
+def print_config_summary():
+    """Print a concise configuration summary for CLI runs."""
+    print("Configuration loaded successfully")
+    print(f"Output directory: {OUTPUT_DIR}")
+    print(f"Model: {MODEL_NAME}")

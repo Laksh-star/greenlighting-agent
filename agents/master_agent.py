@@ -4,10 +4,14 @@ Master Orchestrator Agent - Coordinates all subagents and synthesizes final reco
 
 from typing import Dict, Any, List
 import asyncio
+import re
 from agents import BaseAgent
 from agents.market_research import MarketResearchAgent
 from agents.financial_model import FinancialModelingAgent
 from agents.risk_analysis import RiskAnalysisAgent
+from agents.audience_intel import AudienceIntelligenceAgent
+from agents.competitive import CompetitiveAnalysisAgent
+from agents.creative_assess import CreativeAssessmentAgent
 from utils.prompt_templates import MASTER_ORCHESTRATOR_PROMPT
 from utils.helpers import (
     print_header, print_success, print_info, print_warning,
@@ -32,10 +36,9 @@ class MasterOrchestratorAgent(BaseAgent):
             "market_research": MarketResearchAgent(),
             "financial_model": FinancialModelingAgent(),
             "risk_analysis": RiskAnalysisAgent(),
-            # Add more subagents as they're created
-            # "audience_intel": AudienceIntelligenceAgent(),
-            # "competitive": CompetitiveAnalysisAgent(),
-            # "creative": CreativeAssessmentAgent(),
+            "audience_intel": AudienceIntelligenceAgent(),
+            "competitive": CompetitiveAnalysisAgent(),
+            "creative": CreativeAssessmentAgent(),
         }
         
         print_success(f"Initialized Master Orchestrator with {len(self.subagents)} subagents")
@@ -84,19 +87,35 @@ class MasterOrchestratorAgent(BaseAgent):
         
         print_header(f"🤖 RUNNING {total_agents} SUBAGENT ANALYSES")
         
-        # Create analysis tasks
+        # Market research runs first so downstream agents can use comparable evidence.
+        market_agent = self.subagents["market_research"]
+        print_info(f"Starting: {market_agent.name}")
+        agent_name, result = await self._run_single_agent(
+            "market_research",
+            market_agent,
+            project_data,
+        )
+        results[agent_name] = result
+        if isinstance(result, dict) and not result.get("error"):
+            project_data["market_analysis"] = result
+            project_data["comparable_evidence"] = result.get("metadata", {}).get(
+                "comparable_evidence",
+                project_data.get("comparable_evidence", []),
+            )
+        completed += 1
+        progress = create_progress_bar(completed, total_agents, width=40)
+        print_success(f"{progress}")
+
         tasks = []
-        agent_names = []
-        
         for name, agent in self.subagents.items():
+            if name == "market_research":
+                continue
             print_info(f"Starting: {agent.name}")
             tasks.append(self._run_single_agent(name, agent, project_data))
-            agent_names.append(name)
-        
-        # Run agents in parallel and collect results
-        for i, task in enumerate(asyncio.as_completed(tasks)):
-            result = await task
-            agent_name = agent_names[i]
+
+        # Run remaining agents in parallel and collect named results.
+        for task in asyncio.as_completed(tasks):
+            agent_name, result = await task
             results[agent_name] = result
             completed += 1
             
@@ -118,22 +137,15 @@ class MasterOrchestratorAgent(BaseAgent):
         name: str,
         agent: BaseAgent,
         project_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    ) -> tuple[str, Dict[str, Any]]:
         """Run a single subagent analysis with error handling."""
         try:
-            # Special handling for agents that need prior results
-            if name == "financial_model" and "market_research" in self.subagents:
-                # Financial model benefits from market research data
-                # For now, we'll just pass project_data
-                # In production, we'd wait for market_research to complete first
-                pass
-            
             result = await agent.analyze(project_data)
-            return result
+            return name, result
             
         except Exception as e:
             print_warning(f"Error in {agent.name}: {str(e)}")
-            return {
+            return name, {
                 "agent": agent.name,
                 "error": str(e),
                 "confidence": 0.0,
@@ -146,6 +158,8 @@ class MasterOrchestratorAgent(BaseAgent):
         results: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Synthesize final recommendation from all subagent results."""
+        if project_data.get("demo_mode"):
+            return self._demo_recommendation(results)
         
         # Build comprehensive summary for Claude
         summary_parts = []
@@ -196,7 +210,34 @@ class MasterOrchestratorAgent(BaseAgent):
             "recommendation": recommendation_category,
             "confidence": overall_confidence,
             "analysis": recommendation_text,
-            "summary": self._extract_summary(recommendation_text)
+            "summary": self._extract_summary(recommendation_text),
+            "decision_drivers": self._extract_decision_drivers(recommendation_text, results),
+        }
+
+    def _demo_recommendation(self, results: Dict[str, Any]) -> Dict[str, Any]:
+        """Create a deterministic recommendation for sample mode."""
+        confidences = [
+            r.get("confidence", 0)
+            for r in results.values()
+            if isinstance(r, dict) and not r.get("error")
+        ]
+        overall_confidence = sum(confidences) / len(confidences) if confidences else 0.75
+        analysis = (
+            "CONDITIONAL GO. The project is credible as a disciplined, contained sci-fi "
+            "thriller with strong comparable logic and manageable downside at the sample "
+            "budget. The greenlight should be conditional on script specificity, capped "
+            "VFX scope, and release positioning away from franchise-scale sci-fi."
+        )
+        return {
+            "recommendation": "CONDITIONAL GO",
+            "confidence": overall_confidence,
+            "analysis": analysis,
+            "summary": "Proceed only with budget discipline, a clear emotional hook, and focused genre positioning.",
+            "decision_drivers": [
+                "Comparable evidence supports upside for contained premium sci-fi.",
+                "The budget is moderate enough to protect downside risk.",
+                "Original sci-fi still needs strong reviews and precise positioning.",
+            ],
         }
     
     def _categorize_recommendation(
@@ -207,12 +248,15 @@ class MasterOrchestratorAgent(BaseAgent):
         """Categorize recommendation as GO, CONDITIONAL, or NO-GO."""
         
         text_lower = text.lower()
+        explicit_recommendation = self._extract_explicit_recommendation(text_lower)
+        if explicit_recommendation:
+            return explicit_recommendation
         
-        # Look for explicit recommendations
-        if "no-go" in text_lower or "no go" in text_lower or "pass" in text_lower:
-            return "NO-GO"
-        elif "conditional" in text_lower:
+        # Fallback to broad phrasing when there is no clear recommendation header.
+        if "conditional" in text_lower:
             return "CONDITIONAL GO"
+        elif "no-go" in text_lower or "no go" in text_lower or "pass" in text_lower:
+            return "NO-GO"
         elif any(word in text_lower for word in ["greenlight", "go ahead", "recommend", "proceed"]):
             return "GO"
         
@@ -225,6 +269,71 @@ class MasterOrchestratorAgent(BaseAgent):
                 return "CONDITIONAL GO"
         
         return "CONDITIONAL GO"  # Default to conditional
+
+    def _extract_explicit_recommendation(self, text_lower: str) -> str:
+        """Find the model's explicit headline recommendation before scanning all text."""
+        normalized = re.sub(r"[*_`#]", "", text_lower)
+        candidate_lines = [
+            line.strip()
+            for line in normalized.splitlines()[:40]
+            if "recommendation" in line or line.strip().startswith("recommend ")
+        ]
+
+        explicit_value_lines = [
+            line
+            for line in candidate_lines
+            if "recommendation:" in line or "recommend a " in line
+        ]
+        for line in explicit_value_lines:
+            parsed = self._parse_recommendation_line(line)
+            if parsed:
+                return parsed
+
+        for line in candidate_lines:
+            parsed = self._parse_recommendation_line(line)
+            if parsed:
+                return parsed
+
+        return ""
+
+    def _parse_recommendation_line(self, line: str) -> str:
+        """Parse one recommendation-like line."""
+        if "conditional go" in line or "recommend a conditional go" in line:
+            return "CONDITIONAL GO"
+        if "no-go" in line or "no go" in line or re.search(r"\bpass\b", line):
+            return "NO-GO"
+        if re.search(r"\bgo\b", line) or "greenlight" in line or "proceed" in line:
+            return "GO"
+        return ""
+
+    def _extract_decision_drivers(
+        self,
+        text: str,
+        results: Dict[str, Any],
+    ) -> List[str]:
+        """Return three concise decision drivers for reports."""
+        drivers = []
+        if "risk_analysis" in results:
+            risk_level = results["risk_analysis"].get("metadata", {}).get("risk_level")
+            if risk_level:
+                drivers.append(f"Risk profile: {risk_level}.")
+        if "financial_model" in results:
+            metrics = results["financial_model"].get("metadata", {}).get("basic_metrics", {})
+            if metrics.get("moderate_roi") is not None:
+                drivers.append(f"Moderate-case ROI: {metrics.get('moderate_roi')}%.")
+        if "market_research" in results:
+            count = results["market_research"].get("metadata", {}).get("comparables_count", 0)
+            if count:
+                drivers.append(f"Comparable evidence rows reviewed: {count}.")
+
+        for line in text.splitlines():
+            stripped = line.strip(" -*")
+            if len(stripped) > 30 and stripped not in drivers:
+                drivers.append(stripped)
+            if len(drivers) == 3:
+                break
+
+        return drivers[:3] or ["See full analysis for supporting rationale."]
     
     def _extract_summary(self, text: str) -> str:
         """Extract executive summary from recommendation text."""
