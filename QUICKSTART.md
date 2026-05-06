@@ -126,7 +126,8 @@ The agent will:
 2. Show real-time progress
 3. Synthesize a final recommendation
 4. Generate Markdown and structured JSON reports in `outputs/reports/`
-5. Save a run ledger in `outputs/runs/` with token usage, estimated Anthropic cost, TMDB request counts, and the report path
+5. Validate report quality before saving, including recommendation consistency, comparable evidence, financial scenarios, and risk matrix coverage
+6. Save a run ledger in `outputs/runs/` with token usage, estimated Anthropic cost, TMDB request counts, and the report path
 
 ### Recommendation Types
 - **GO** ✅ - Strong greenlight, proceed with production

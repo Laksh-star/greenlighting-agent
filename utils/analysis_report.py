@@ -59,6 +59,7 @@ def build_analysis_payload(
                 {},
             ),
         },
+        "report_quality": results.get("report_quality", {}),
         "subagent_results": subagents,
         "markdown_report_path": str(markdown_report_path),
         "run_ledger_path": str(run_ledger_path) if run_ledger_path else "",

@@ -16,6 +16,7 @@ from main import GreenlightingCLI, parse_comparables
 from tools.tmdb_tools import TMDBClient
 from utils.analysis_report import build_analysis_payload
 from utils.batch import build_batch_summary_row, load_batch_projects
+from utils.report_quality import validate_report_quality
 from utils.run_ledger import build_run_ledger, summarize_model_usage
 
 
@@ -198,6 +199,115 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
         self.assertEqual(payload["financial_scenarios"]["moderate_roi"], 42)
         self.assertEqual(payload["risk_matrix"]["risk_level"], "Medium Risk")
         self.assertEqual(payload["run_ledger_path"], "outputs/runs/test_run.json")
+
+    def _quality_results(self, recommendation="CONDITIONAL GO", analysis=None):
+        return {
+            "requested_project_data": {
+                "description": "Quality test",
+                "budget": 10_000_000,
+                "genre": "Science Fiction",
+                "platform": "theatrical",
+                "comparables": ["Arrival"],
+            },
+            "project_data": {
+                "description": "Quality test",
+                "budget": 10_000_000,
+                "genre": "Science Fiction",
+                "platform": "theatrical",
+                "target_audience": "general",
+                "comparables": ["Arrival"],
+            },
+            "final_recommendation": {
+                "recommendation": recommendation,
+                "confidence": 0.8,
+                "summary": "Quality summary",
+                "analysis": analysis or "Recommendation: CONDITIONAL GO\nProceed with guardrails.",
+                "decision_drivers": ["Driver"],
+            },
+            "subagent_results": {
+                "market_research": {
+                    "agent": "Market Research Agent",
+                    "confidence": 0.8,
+                    "findings": "Market findings",
+                    "metadata": {
+                        "comparable_evidence": [{"title": "Arrival", "source": "tmdb"}],
+                    },
+                },
+                "financial_model": {
+                    "agent": "Financial Modeling Agent",
+                    "confidence": 0.8,
+                    "findings": "Finance findings",
+                    "metadata": {
+                        "basic_metrics": {
+                            "conservative_revenue": 12_000_000,
+                            "moderate_revenue": 20_000_000,
+                            "optimistic_revenue": 30_000_000,
+                        },
+                    },
+                },
+                "risk_analysis": {
+                    "agent": "Risk Analysis Agent",
+                    "confidence": 0.8,
+                    "findings": "Risk findings",
+                    "metadata": {
+                        "overall_risk_score": 5.5,
+                        "risk_level": "Medium Risk",
+                        "risk_factors": {"budget_risk": 5},
+                    },
+                },
+            },
+        }
+
+    def _quality_markdown(self):
+        return "\n".join([
+            "### Comparable Evidence",
+            "| Title | Year | Budget | Revenue | ROI | Rating | Similar Signals |",
+            "### Financial Scenario Snapshot",
+            "### Risk Matrix",
+        ])
+
+    def test_report_quality_accepts_complete_report(self):
+        quality = validate_report_quality(self._quality_results(), self._quality_markdown())
+
+        self.assertTrue(quality["passed"])
+        self.assertEqual(quality["errors"], [])
+        self.assertEqual(quality["warnings"], [])
+
+    def test_report_quality_rejects_recommendation_mismatch(self):
+        quality = validate_report_quality(
+            self._quality_results(
+                recommendation="GO",
+                analysis="Recommendation: NO-GO\nDo not proceed.",
+            ),
+            self._quality_markdown(),
+        )
+
+        self.assertFalse(quality["passed"])
+        self.assertIn("does not match synthesis text", quality["errors"][0])
+
+    def test_report_quality_requires_comparables_finance_and_risk(self):
+        results = self._quality_results()
+        results["subagent_results"]["market_research"]["metadata"]["comparable_evidence"] = []
+        results["subagent_results"]["financial_model"]["metadata"]["basic_metrics"] = {}
+        results["subagent_results"]["risk_analysis"]["metadata"] = {}
+
+        quality = validate_report_quality(results, "Recommendation: CONDITIONAL GO")
+
+        self.assertFalse(quality["passed"])
+        self.assertIn("Comparable evidence is missing", "\n".join(quality["errors"]))
+        self.assertIn("Financial scenarios are missing", "\n".join(quality["errors"]))
+        self.assertIn("Risk matrix metadata is missing", "\n".join(quality["errors"]))
+
+    def test_report_quality_warns_on_tmdb_fallback(self):
+        results = self._quality_results()
+        results["subagent_results"]["market_research"]["metadata"][
+            "market_data_warning"
+        ] = "TMDB enrichment unavailable"
+
+        quality = validate_report_quality(results, self._quality_markdown())
+
+        self.assertTrue(quality["passed"])
+        self.assertEqual(quality["warnings"], ["TMDB enrichment unavailable"])
 
     def test_run_ledger_summarizes_usage_and_cost(self):
         results = {

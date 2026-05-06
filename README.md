@@ -26,6 +26,7 @@ The Greenlighting Agent conducts comprehensive analysis across 6 implemented sub
 - **6 Specialized Subagents** for domain-specific analysis
 - **TMDB API comparable enrichment** when a TMDB key is configured
 - **No-key sample mode** for deterministic local demos
+- **Report quality controls** before Markdown/JSON outputs are saved
 - **Slash Commands** for workflow control
 
 ### Technology Stack
@@ -200,6 +201,8 @@ The agent generates comprehensive reports including:
 7. **Creative Evaluation** - Script/concept strengths
 8. **Risk Matrix** - Identified risks with mitigation strategies
 9. **Final Recommendation** - Go/No-Go with confidence level
+
+Before reports are saved, the app validates that the recommendation matches the synthesis text, comparable evidence is present when comparable titles were supplied, financial scenarios exist for positive budgets, and the risk matrix is included. If TMDB enrichment falls back to input-only rows, the run prints a report quality warning.
 
 Reports saved to:
 - `outputs/reports/project_name_YYYYMMDD_HHMMSS.md` for human-readable Markdown

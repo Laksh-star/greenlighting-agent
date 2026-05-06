@@ -26,6 +26,7 @@ from utils.batch import (
     load_batch_projects,
     save_batch_summary,
 )
+from utils.report_quality import assert_report_quality
 from utils.run_ledger import save_run_ledger
 
 
@@ -130,6 +131,10 @@ class GreenlightingCLI:
         
         # Format report
         report_content = self._format_report(results)
+        quality = assert_report_quality(results, report_content)
+        results["report_quality"] = quality
+        for warning in quality.get("warnings", []):
+            print_warning(f"Report quality warning: {warning}")
         
         # Save to file
         with open(filepath, 'w') as f:
