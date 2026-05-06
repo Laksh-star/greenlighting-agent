@@ -100,6 +100,16 @@ python main.py --project "Sci-fi thriller about AI rebellion" --budget 50000000 
 python main.py --sample
 ```
 
+### Batch Mode
+
+```bash
+python main.py --batch examples/projects.csv --sample
+python main.py --batch projects.csv
+```
+
+Batch input columns: `description,budget,genre,platform,comparables,target_audience`.
+Batch summaries are saved to `outputs/batches/` as CSV and JSON.
+
 ### Interactive Mode
 
 ```bash

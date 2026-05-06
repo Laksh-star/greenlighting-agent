@@ -15,6 +15,7 @@ from agents.master_agent import MasterOrchestratorAgent
 from main import GreenlightingCLI, parse_comparables
 from tools.tmdb_tools import TMDBClient
 from utils.analysis_report import build_analysis_payload
+from utils.batch import build_batch_summary_row, load_batch_projects
 from utils.run_ledger import build_run_ledger, summarize_model_usage
 
 
@@ -84,6 +85,15 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
         agent = MarketResearchAgent()
         rows = agent._fallback_comparable_evidence(["Arrival", "Moon"])
         self.assertEqual([row["title"] for row in rows], ["Arrival", "Moon"])
+        self.assertEqual(rows[0]["source"], "input only")
+
+    def test_demo_comparable_evidence_uses_fallback_for_non_sample_titles(self):
+        agent = MarketResearchAgent()
+        rows = agent._demo_comparable_evidence(["Paranormal Activity", "Host"])
+        self.assertEqual(
+            [row["title"] for row in rows],
+            ["Paranormal Activity", "Host"],
+        )
         self.assertEqual(rows[0]["source"], "input only")
 
     def test_report_renders_fallback_comparable_rows(self):
@@ -235,6 +245,49 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
         self.assertEqual(ledger["report_path"], "outputs/reports/test.md")
         self.assertNotIn("market_analysis", ledger["project"])
 
+    def test_load_batch_projects(self):
+        projects = load_batch_projects(Path("examples/projects.csv"))
+
+        self.assertEqual(len(projects), 2)
+        self.assertEqual(projects[0]["budget"], 18_000_000)
+        self.assertEqual(projects[0]["comparables"], ["Ex Machina", "Moon", "Arrival"])
+
+    def test_batch_summary_row_extracts_metrics(self):
+        results = {
+            "requested_project_data": {
+                "description": "A test project with a long title",
+            },
+            "final_recommendation": {
+                "recommendation": "CONDITIONAL GO",
+                "confidence": 0.81234,
+            },
+            "subagent_results": {
+                "financial_model": {
+                    "metadata": {
+                        "basic_metrics": {
+                            "moderate_roi": 42,
+                        }
+                    }
+                },
+                "risk_analysis": {
+                    "metadata": {
+                        "risk_level": "Medium Risk",
+                        "overall_risk_score": 5.5,
+                    }
+                },
+            },
+            "report_path": "outputs/reports/test.md",
+            "analysis_json_path": "outputs/reports/test.json",
+            "run_ledger_path": "outputs/runs/test_run.json",
+        }
+
+        row = build_batch_summary_row(results)
+
+        self.assertEqual(row["recommendation"], "CONDITIONAL GO")
+        self.assertEqual(row["confidence"], 0.8123)
+        self.assertEqual(row["moderate_roi"], 42)
+        self.assertEqual(row["risk_level"], "Medium Risk")
+
     def test_tmdb_comparable_enrichment_with_mocked_responses(self):
         client = TMDBClient()
 
@@ -283,6 +336,21 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
         self.assertIn("recommendation", payload)
         self.assertIn("run_ledger_path", payload)
         self.assertTrue(list((repo / "outputs" / "runs").glob("*.json")))
+
+    def test_batch_sample_generates_summaries(self):
+        repo = Path(__file__).resolve().parents[1]
+        result = subprocess.run(
+            [sys.executable, "main.py", "--batch", "examples/projects.csv", "--sample"],
+            cwd=repo,
+            text=True,
+            capture_output=True,
+            timeout=60,
+        )
+
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertIn("BATCH ANALYSIS COMPLETE", result.stdout)
+        self.assertTrue(list((repo / "outputs" / "batches").glob("*_summary.csv")))
+        self.assertTrue(list((repo / "outputs" / "batches").glob("*_summary.json")))
 
 
 if __name__ == "__main__":

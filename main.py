@@ -21,6 +21,11 @@ from utils.helpers import (
     sanitize_filename, extract_project_name, get_timestamp, format_currency
 )
 from utils.analysis_report import save_analysis_json
+from utils.batch import (
+    build_batch_summary_row,
+    load_batch_projects,
+    save_batch_summary,
+)
 from utils.run_ledger import save_run_ledger
 
 
@@ -79,6 +84,7 @@ class GreenlightingCLI:
         results["run_ledger_path"] = str(ledger_path)
         analysis_json_path = save_analysis_json(results, report_path, ledger_path)
         results["analysis_json_path"] = str(analysis_json_path)
+        results["report_path"] = str(report_path)
         
         # Display results
         self._display_results(results, report_path)
@@ -88,6 +94,29 @@ class GreenlightingCLI:
     async def analyze_sample(self) -> Dict[str, Any]:
         """Run the no-key deterministic sample project."""
         return await self.analyze_project(**SAMPLE_PROJECT)
+
+    async def analyze_batch(self, csv_path: Path, sample: bool = False) -> Dict[str, Any]:
+        """Run analysis for every project in a CSV batch."""
+        projects = load_batch_projects(csv_path)
+        rows = []
+
+        print_header(f"📚 BATCH ANALYSIS STARTING ({len(projects)} PROJECTS)")
+        for index, project in enumerate(projects, start=1):
+            print_info(f"Batch project {index}/{len(projects)}")
+            results = await self.analyze_project(
+                **project,
+                demo_mode=sample,
+            )
+            rows.append(build_batch_summary_row(results))
+
+        summary_paths = save_batch_summary(rows)
+        print_header("✅ BATCH ANALYSIS COMPLETE")
+        print(f"📊 Batch CSV summary saved to: {summary_paths['csv_path']}")
+        print(f"🧾 Batch JSON summary saved to: {summary_paths['json_path']}")
+        return {
+            "rows": rows,
+            **summary_paths,
+        }
     
     def _save_report(self, results: Dict[str, Any]) -> Path:
         """Save analysis report to file."""
@@ -439,6 +468,12 @@ async def main():
         type=str,
         help='Project description'
     )
+
+    parser.add_argument(
+        '--batch',
+        type=str,
+        help='CSV file with project rows to analyze'
+    )
     
     parser.add_argument(
         '--budget',
@@ -493,7 +528,9 @@ async def main():
     print_config_summary()
     cli = GreenlightingCLI()
     
-    if args.sample:
+    if args.batch:
+        await cli.analyze_batch(Path(args.batch), sample=args.sample)
+    elif args.sample:
         await cli.analyze_sample()
     elif args.interactive or not args.project:
         # Interactive mode

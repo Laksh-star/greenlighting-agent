@@ -43,10 +43,13 @@ Thumbs.db
 outputs/reports/*.md
 outputs/reports/*.json
 outputs/runs/*.json
+outputs/batches/*.csv
+outputs/batches/*.json
 
 # Keep the directory but ignore contents
 !outputs/reports/.gitkeep
 !outputs/runs/.gitkeep
+!outputs/batches/.gitkeep
 
 # Logs
 *.log

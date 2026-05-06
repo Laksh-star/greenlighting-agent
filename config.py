@@ -17,6 +17,8 @@ OUTPUT_DIR = Path(os.getenv("OUTPUT_DIR", "outputs/reports"))
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 RUNS_DIR = Path(os.getenv("RUNS_DIR", "outputs/runs"))
 RUNS_DIR.mkdir(parents=True, exist_ok=True)
+BATCHES_DIR = Path(os.getenv("BATCHES_DIR", "outputs/batches"))
+BATCHES_DIR.mkdir(parents=True, exist_ok=True)
 
 # API Keys
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
@@ -181,4 +183,5 @@ def print_config_summary():
     print("Configuration loaded successfully")
     print(f"Output directory: {OUTPUT_DIR}")
     print(f"Run ledger directory: {RUNS_DIR}")
+    print(f"Batch summary directory: {BATCHES_DIR}")
     print(f"Model: {MODEL_NAME}")

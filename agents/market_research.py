@@ -36,7 +36,7 @@ class MarketResearchAgent(BaseAgent):
         comparable_evidence = project_data.get("comparable_evidence")
 
         if project_data.get("demo_mode"):
-            comparable_evidence = comparable_evidence or SAMPLE_COMPARABLE_EVIDENCE
+            comparable_evidence = comparable_evidence or self._demo_comparable_evidence(comparables)
             findings = self._demo_findings(genre, budget, comparable_evidence)
             return self.format_result(
                 findings=findings,
@@ -132,6 +132,13 @@ Base your analysis on recent industry data and trends.
             for title in comparables
         ]
 
+    def _demo_comparable_evidence(self, comparables: list) -> list:
+        """Choose deterministic evidence for sample mode without mislabeling rows."""
+        sample_titles = [item["title"] for item in SAMPLE_COMPARABLE_EVIDENCE]
+        if not comparables or comparables == sample_titles:
+            return SAMPLE_COMPARABLE_EVIDENCE
+        return self._fallback_comparable_evidence(comparables)
+
     def _format_comparable_evidence(self, comparable_evidence: list) -> str:
         """Format comparable rows for the LLM prompt."""
         if not comparable_evidence:
@@ -149,13 +156,24 @@ Base your analysis on recent industry data and trends.
 
     def _demo_findings(self, genre: str, budget: int, comparable_evidence: list) -> str:
         """Return deterministic market findings for sample mode."""
-        avg_revenue = sum(item.get("revenue", 0) for item in comparable_evidence) / max(
-            len(comparable_evidence), 1
-        )
+        revenue_rows = [
+            item.get("revenue", 0)
+            for item in comparable_evidence
+            if item.get("revenue", 0) > 0
+        ]
+        if revenue_rows:
+            comparable_note = (
+                f"Comparable titles average about ${sum(revenue_rows) / len(revenue_rows):,.0f} "
+                "in reported worldwide revenue"
+            )
+        else:
+            comparable_note = (
+                "Comparable titles were supplied as input-only rows, so live revenue "
+                "benchmarks should be added before relying on the market estimate"
+            )
         return (
             f"The {genre} package is viable as a contained, mid-budget genre project. "
-            f"Comparable titles average about ${avg_revenue:,.0f} in reported worldwide "
-            f"revenue, with strongest upside when the concept has a clean hook and premium "
+            f"{comparable_note}, with strongest upside when the concept has a clean hook and premium "
             f"critical positioning. At a ${budget:,} budget, the project sits below the "
             f"largest comparable while keeping enough scale for theatrical marketing. "
             "Market risk is moderate: original sci-fi is selective, but contained AI and "

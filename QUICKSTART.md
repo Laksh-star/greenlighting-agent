@@ -74,6 +74,18 @@ python main.py --sample
 python main.py --project "A sci-fi thriller about AI rebellion in 2045" --budget 50000000 --genre "Science Fiction" --platform "theatrical" --comparables "Arrival,Ex Machina,The Creator" --target-audience "adults 18-49"
 ```
 
+### Batch Mode
+
+```bash
+# Cheap mechanics test with deterministic sample-mode analysis
+python main.py --batch examples/projects.csv --sample
+
+# Live batch analysis
+python main.py --batch projects.csv
+```
+
+Batch summaries are saved to `outputs/batches/`.
+
 ### Interactive Mode (Recommended)
 
 ```bash
