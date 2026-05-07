@@ -199,11 +199,15 @@
             <h2>Report History</h2>
             <p>Open previous local runs without rerunning analysis.</p>
           </div>
-          <button id="refresh-history" type="button" class="secondary">Refresh History</button>
+          <div class="history-toolbar-actions">
+            <button id="refresh-history" type="button" class="secondary">Refresh History</button>
+            <button id="compare-history" type="button">Compare Selected</button>
+          </div>
         </div>
         <div id="report-history" class="history-list">
           <p class="placeholder">Previous reports will appear here.</p>
         </div>
+        <div id="history-comparison" class="history-comparison hidden"></div>
       </section>
 
       <section class="comparison-panel">

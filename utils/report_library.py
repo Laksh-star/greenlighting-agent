@@ -52,17 +52,24 @@ def _summary_from_payload(payload: Dict[str, Any], json_path: Path, markdown_pat
     description = project.get("description", "Untitled project")
     financial = payload.get("financial_scenarios", {})
     risk = payload.get("risk_matrix", {})
+    assumptions = payload.get("financial_assumptions", {})
     return {
         "id": json_path.stem,
         "generated_at": payload.get("generated_at", ""),
         "project_name": _project_name(description),
         "description": description,
+        "budget": project.get("budget", 0),
         "genre": project.get("genre", "Unknown"),
         "platform": project.get("platform", ""),
+        "target_audience": project.get("target_audience", ""),
         "recommendation": payload.get("recommendation", ""),
         "confidence": payload.get("confidence", 0),
         "moderate_roi": financial.get("moderate_roi", financial.get("estimated_roi", "")),
+        "total_exposure": financial.get("total_exposure", ""),
+        "break_even_revenue": financial.get("break_even_revenue", ""),
+        "risk_tolerance": assumptions.get("risk_tolerance", ""),
         "risk_level": risk.get("risk_level", ""),
+        "overall_risk_score": risk.get("overall_risk_score", ""),
         "markdown_path": str(markdown_path),
         "json_path": str(json_path),
         "has_markdown": markdown_path.exists(),

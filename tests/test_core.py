@@ -293,6 +293,8 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
 
         self.assertEqual(summaries[0]["id"], "sample_report")
         self.assertEqual(summaries[0]["recommendation"], "CONDITIONAL GO")
+        self.assertEqual(summaries[0]["budget"], 0)
+        self.assertEqual(summaries[0]["overall_risk_score"], "")
         self.assertEqual(detail["markdown"], "# Sample Report")
 
     def _quality_results(self, recommendation="CONDITIONAL GO", analysis=None):

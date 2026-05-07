@@ -12,6 +12,8 @@ const markdownDownload = document.querySelector("#markdown-download");
 const jsonDownload = document.querySelector("#json-download");
 const refreshHistory = document.querySelector("#refresh-history");
 const reportHistory = document.querySelector("#report-history");
+const compareHistory = document.querySelector("#compare-history");
+const historyComparison = document.querySelector("#history-comparison");
 const batchCsv = document.querySelector("#batch-csv");
 const loadBatchSample = document.querySelector("#load-batch-sample");
 const runBatch = document.querySelector("#run-batch");
@@ -54,6 +56,8 @@ let eventSource = null;
 let batchEventSource = null;
 let completedAgents = new Set();
 let selectedComparableTitles = [];
+let reportHistoryRows = [];
+let selectedHistoryReports = new Set();
 
 const agentLabels = {
   market_research: "Market research",
@@ -181,6 +185,10 @@ refreshHistory.addEventListener("click", async () => {
   await loadReportHistory();
 });
 
+compareHistory.addEventListener("click", () => {
+  renderSelectedHistoryComparison();
+});
+
 runBatch.addEventListener("click", async () => {
   if (!batchCsv.value.trim()) {
     batchStatus.textContent = "Add CSV rows before running batch";
@@ -305,7 +313,10 @@ async function loadReportHistory() {
       throw new Error(await response.text());
     }
     const payload = await response.json();
-    reportHistory.innerHTML = renderReportHistory(payload.reports || []);
+    reportHistoryRows = payload.reports || [];
+    selectedHistoryReports = new Set([...selectedHistoryReports].filter((id) => reportHistoryRows.some((report) => report.id === id)));
+    reportHistory.innerHTML = renderReportHistory(reportHistoryRows);
+    renderSelectedHistoryComparison();
   } catch (error) {
     reportHistory.innerHTML = `<p class="placeholder">${escapeHtml(error.message)}</p>`;
   }
@@ -317,6 +328,10 @@ function renderReportHistory(reports) {
   }
   return reports.map((report) => `
     <article class="history-card">
+      <label class="history-select">
+        <input type="checkbox" class="history-compare-toggle" data-id="${escapeHtml(report.id)}" ${selectedHistoryReports.has(report.id) ? "checked" : ""} />
+        <span>Compare</span>
+      </label>
       <div>
         <h3>${escapeHtml(report.project_name)}</h3>
         <p>${escapeHtml(report.genre || "Unknown")} · ${escapeHtml(report.platform || "n/a")} · ${formatDate(report.generated_at)}</p>
@@ -337,6 +352,85 @@ function renderReportHistory(reports) {
 }
 
 reportHistory.addEventListener("click", async (event) => {
+  const toggle = event.target.closest(".history-compare-toggle");
+  if (toggle) {
+    updateSelectedHistoryReport(toggle.dataset.id, toggle.checked);
+    renderSelectedHistoryComparison();
+    return;
+  }
+
+  const button = event.target.closest(".open-history-report");
+  if (!button) {
+    return;
+  }
+  await openHistoryReport(button.dataset.id);
+});
+
+function updateSelectedHistoryReport(reportId, selected) {
+  if (!reportId) {
+    return;
+  }
+  if (selected) {
+    selectedHistoryReports.add(reportId);
+  } else {
+    selectedHistoryReports.delete(reportId);
+  }
+}
+
+function renderSelectedHistoryComparison() {
+  const rows = reportHistoryRows.filter((report) => selectedHistoryReports.has(report.id));
+  if (!rows.length) {
+    historyComparison.classList.add("hidden");
+    historyComparison.innerHTML = "";
+    return;
+  }
+  historyComparison.classList.remove("hidden");
+  historyComparison.innerHTML = renderHistoryComparisonTable(rows);
+}
+
+function renderHistoryComparisonTable(rows) {
+  const tableRows = rows.map((row) => `
+    <tr>
+      <td>${escapeHtml(row.project_name)}</td>
+      <td><span class="mini-pill ${recommendationClass(row.recommendation)}">${escapeHtml(row.recommendation || "n/a")}</span></td>
+      <td>${Math.round((Number(row.confidence) || 0) * 100)}%</td>
+      <td>${escapeHtml(row.genre || "Unknown")}</td>
+      <td>${escapeHtml(row.platform || "n/a")}</td>
+      <td>${formatMoney(row.budget)}</td>
+      <td>${escapeHtml(row.moderate_roi || "n/a")}</td>
+      <td>${escapeHtml(row.risk_level || "n/a")}</td>
+      <td>${escapeHtml(row.risk_tolerance || "n/a")}</td>
+      <td><button type="button" class="secondary open-history-report" data-id="${escapeHtml(row.id)}">Open</button></td>
+    </tr>
+  `).join("");
+  return `
+    <div class="comparison-status">
+      <span>${rows.length} saved reports selected</span>
+      <span>History comparison</span>
+    </div>
+    <div class="comparison-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Project</th>
+            <th>Recommendation</th>
+            <th>Confidence</th>
+            <th>Genre</th>
+            <th>Platform</th>
+            <th>Budget</th>
+            <th>ROI</th>
+            <th>Risk</th>
+            <th>Tolerance</th>
+            <th>Preview</th>
+          </tr>
+        </thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+historyComparison.addEventListener("click", async (event) => {
   const button = event.target.closest(".open-history-report");
   if (!button) {
     return;
