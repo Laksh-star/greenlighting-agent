@@ -23,7 +23,7 @@ from utils.report_library import list_report_summaries, load_report_detail
 from utils.run_ledger import build_run_ledger, summarize_model_usage
 from utils.slate_dashboard import build_slate_dashboard
 from utils.source_material import build_source_material_payload
-from utils.studio_brief import build_studio_brief
+from utils.studio_brief import build_studio_brief, build_studio_brief_html
 from web_app import JOBS, app
 
 
@@ -324,6 +324,12 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
         self.assertIn("# Studio Greenlight Brief", brief)
         self.assertIn("**Recommendation:** GO", brief)
         self.assertIn("Comp A", brief)
+
+        html = build_studio_brief_html(payload)
+
+        self.assertIn("Print / Save PDF", html)
+        self.assertIn("Contained thriller", html)
+        self.assertIn("@media print", html)
 
     def test_slate_dashboard_summarizes_report_rows(self):
         dashboard = build_slate_dashboard([
@@ -773,6 +779,28 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("Studio Greenlight Brief", response.text)
+
+    def test_web_report_brief_print_endpoint(self):
+        report_dir = Path("outputs/reports")
+        report_dir.mkdir(parents=True, exist_ok=True)
+        report_id = "unit_print_brief_report"
+        payload = {
+            "project": {"description": "Printable brief project", "budget": 2_000_000},
+            "recommendation": "GO",
+            "confidence": 0.9,
+            "financial_scenarios": {},
+            "risk_matrix": {},
+        }
+        (report_dir / f"{report_id}.json").write_text(json.dumps(payload))
+        (report_dir / f"{report_id}.md").write_text("# Full Report")
+
+        client = TestClient(app)
+        response = client.get(f"/api/reports/{report_id}/brief-print")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("text/html", response.headers["content-type"])
+        self.assertIn("Print / Save PDF", response.text)
+        self.assertIn("Printable brief project", response.text)
 
     def test_web_slate_dashboard_endpoint(self):
         report_dir = Path("outputs/reports")

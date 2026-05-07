@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Dict
 
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -21,7 +21,7 @@ from utils.report_library import list_report_summaries, load_report_detail
 from utils.sample_data import SAMPLE_PROJECT
 from utils.slate_dashboard import build_slate_dashboard
 from utils.source_material import build_source_material_payload
-from utils.studio_brief import build_studio_brief
+from utils.studio_brief import build_studio_brief, build_studio_brief_html
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -362,6 +362,18 @@ async def report_brief(report_id: str):
         media_type="text/markdown",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+@app.get("/api/reports/{report_id}/brief-print")
+async def report_brief_print(report_id: str):
+    """Return a printable studio brief HTML page."""
+    try:
+        detail = load_report_detail(OUTPUT_DIR, report_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Report not found")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid report id")
+    return HTMLResponse(build_studio_brief_html(detail["payload"]))
 
 
 async def _run_analysis(job_id: str, request: AnalysisRequest):
