@@ -60,8 +60,37 @@
                 <span>Search comparable titles</span>
                 <input id="comparable-query" type="search" placeholder="Search TMDB, e.g. Arrival" />
               </label>
+              <label class="field">
+                <span>Source</span>
+                <select id="comparable-source">
+                  <option value="tmdb">TMDB</option>
+                  <option value="private">Private Dataset</option>
+                  <option value="both">Private + TMDB</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Private dataset</span>
+                <select id="private-dataset-select">
+                  <option value="">All local datasets</option>
+                </select>
+              </label>
               <button id="search-comparables" type="button" class="secondary">Search</button>
             </div>
+            <details class="private-dataset-panel">
+              <summary>Private dataset</summary>
+              <div class="private-dataset-grid">
+                <label class="field">
+                  <span>Dataset name</span>
+                  <input id="private-dataset-name" type="text" value="Studio Sample" />
+                </label>
+                <div class="private-dataset-actions">
+                  <button id="load-private-sample" type="button" class="secondary">Load Sample Dataset</button>
+                  <button id="save-private-dataset" type="button">Save Dataset</button>
+                </div>
+              </div>
+              <textarea id="private-dataset-csv" class="batch-input" rows="6"></textarea>
+              <p id="private-dataset-status" class="inline-status">Private datasets stay local under data/private/.</p>
+            </details>
             <p id="comparable-search-status" class="inline-status">Select titles to add them to comparables.</p>
             <div id="selected-comparables" class="selected-comparables"></div>
             <div id="comparable-results" class="comparable-results"></div>

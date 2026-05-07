@@ -15,6 +15,7 @@ from agents.master_agent import MasterOrchestratorAgent
 from fastapi.testclient import TestClient
 from main import GreenlightingCLI, parse_comparables
 from tools.tmdb_tools import TMDBClient
+from tools.private_dataset import PrivateDatasetStore, PRIVATE_DATASET_SAMPLE, parse_private_dataset_csv
 from utils.analysis_report import build_analysis_payload
 from utils.batch import build_batch_summary_row, load_batch_projects, load_batch_projects_from_text
 from utils.report_quality import validate_report_quality
@@ -438,6 +439,23 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
         self.assertEqual(enriched[0]["roi"], 96.0)
         self.assertEqual(enriched[0]["similar_titles"], ["Sunshine"])
 
+    def test_private_dataset_parses_comparable_evidence(self):
+        rows = parse_private_dataset_csv(PRIVATE_DATASET_SAMPLE)
+
+        self.assertEqual(rows[0]["title"], "Lunar Signal")
+        self.assertEqual(rows[0]["source"], "private dataset")
+        self.assertEqual(rows[0]["roi"], 250.0)
+
+    def test_private_dataset_store_searches_saved_rows(self):
+        temp_dir = Path("outputs/test_private_data")
+        store = PrivateDatasetStore(temp_dir)
+        metadata = store.save_dataset("Studio Test", PRIVATE_DATASET_SAMPLE)
+
+        rows = store.search("lunar", dataset_id=metadata["id"])
+
+        self.assertEqual(metadata["row_count"], 3)
+        self.assertEqual(rows[0]["title"], "Lunar Signal")
+
     def test_sample_generates_report_without_keys(self):
         repo = Path(__file__).resolve().parents[1]
         result = subprocess.run(
@@ -535,6 +553,33 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
         self.assertEqual(payload["source"], "demo fallback")
         self.assertEqual(payload["results"][0]["title"], "Moon")
         self.assertIn("TMDB search unavailable", payload["warning"])
+
+    def test_web_private_dataset_endpoints_and_search(self):
+        client = TestClient(app)
+        response = client.post(
+            "/api/private-datasets",
+            json={
+                "name": "Unit Studio",
+                "csv_text": PRIVATE_DATASET_SAMPLE,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        dataset = response.json()["dataset"]
+
+        list_response = client.get("/api/private-datasets")
+        self.assertEqual(list_response.status_code, 200)
+        self.assertTrue(
+            any(item["id"] == dataset["id"] for item in list_response.json()["datasets"])
+        )
+
+        search_response = client.get(
+            f"/api/comparables/search?q=Lunar&source=private&dataset_id={dataset['id']}"
+        )
+        self.assertEqual(search_response.status_code, 200)
+        payload = search_response.json()
+        self.assertEqual(payload["source"], "private dataset")
+        self.assertEqual(payload["results"][0]["title"], "Lunar Signal")
 
     def test_web_batch_analyze_starts_job(self):
         client = TestClient(app)

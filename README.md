@@ -23,6 +23,7 @@ AI-assisted greenlight analysis for film and TV projects. The app combines compa
 - **Master synthesis:** Produces a final recommendation, confidence score, executive summary, and decision drivers.
 - **TMDB enrichment:** Uses TMDB to enrich supplied comparable titles when `TMDB_API_KEY` is configured.
 - **Comparable search:** Search/select TMDB titles from the browser and auto-fill the analysis comparables.
+- **Private dataset mode:** Save local studio datasets and run comparable search/analysis with private comps, TMDB, or both.
 - **No-key demo mode:** Generates deterministic sample reports without Anthropic or TMDB credentials.
 - **Report quality controls:** Blocks incomplete reports before save and warns when comparables fall back to input-only data.
 - **Audit artifacts:** Writes Markdown, structured JSON, run ledgers, token usage, estimated Anthropic cost, and batch summaries.
@@ -137,6 +138,7 @@ Generated files stay local by default:
 - `outputs/runs/*_run.json` - run ledger with token usage, estimated cost, TMDB usage, and report paths
 - `outputs/batches/*_summary.csv` - batch comparison summary
 - `outputs/batches/*_summary.json` - structured batch summary
+- `data/private/*` - local private datasets, ignored by git
 
 ## Project Structure
 
@@ -144,6 +146,7 @@ Generated files stay local by default:
 greenlighting-agent/
 ├── agents/                 # Master orchestrator and six subagents
 ├── docs/screenshots/       # README screenshots
+├── data/private/           # Local private datasets, not committed
 ├── examples/projects.csv   # Batch-mode sample input
 ├── tools/tmdb_tools.py     # TMDB comparable enrichment
 ├── utils/                  # Reports, ledgers, batch helpers, quality checks

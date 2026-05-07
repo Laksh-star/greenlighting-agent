@@ -46,6 +46,10 @@ class GreenlightingCLI:
         comparables: list = None,
         target_audience: str = "general",
         demo_mode: bool = False,
+        comparable_evidence: list = None,
+        market_data_warning: str = "",
+        comparable_source: str = "tmdb",
+        private_dataset_id: str = "",
     ) -> Dict[str, Any]:
         """
         Run full greenlighting analysis.
@@ -70,7 +74,13 @@ class GreenlightingCLI:
             'comparables': comparables or [],
             'target_audience': target_audience,
             'demo_mode': demo_mode,
+            'comparable_source': comparable_source,
+            'private_dataset_id': private_dataset_id,
         }
+        if comparable_evidence is not None:
+            project_data["comparable_evidence"] = comparable_evidence
+        if market_data_warning:
+            project_data["market_data_warning"] = market_data_warning
         requested_project_data = dict(project_data)
         
         tmdb_client.reset_usage_metrics()

@@ -45,11 +45,16 @@ outputs/reports/*.json
 outputs/runs/*.json
 outputs/batches/*.csv
 outputs/batches/*.json
+outputs/test_private_data/
+outputs/web_smoke/
+data/private/*.csv
+data/private/*.json
 
 # Keep the directory but ignore contents
 !outputs/reports/.gitkeep
 !outputs/runs/.gitkeep
 !outputs/batches/.gitkeep
+!data/private/.gitkeep
 
 # Logs
 *.log

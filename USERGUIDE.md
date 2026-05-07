@@ -61,6 +61,7 @@ The web UI supports:
 - target audience
 - comparable titles
 - TMDB comparable search and selection
+- private dataset save/search mode
 - demo-mode toggle
 - live agent progress stream
 - rendered report preview
@@ -85,6 +86,23 @@ Comparable search:
 4. Run the analysis with those selected comparables.
 
 If TMDB is unavailable, the UI returns demo fallback comparables so the workflow is still testable.
+
+Private dataset mode:
+
+1. Open **Private dataset** inside the comparable search panel.
+2. Click **Load Sample Dataset** or paste a studio CSV.
+3. Give it a dataset name and click **Save Dataset**.
+4. Change **Source** to `Private Dataset` or `Private + TMDB`.
+5. Search/select comparable titles.
+6. Run the analysis. Private rows are used as comparable evidence and clearly labeled in the report.
+
+Private dataset columns:
+
+```text
+title,year,genre,platform,budget,marketing_spend,revenue,rating,popularity,audience,territory,notes
+```
+
+Saved private datasets are local files under `data/private/` and are ignored by git.
 
 Project comparison run:
 

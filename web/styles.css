@@ -157,9 +157,34 @@ textarea:focus {
 
 .comparable-search-header {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(220px, 1fr) 150px minmax(170px, 0.7fr) auto;
   gap: 12px;
   align-items: end;
+}
+
+.private-dataset-panel {
+  border-top: 1px solid var(--line);
+  margin-top: 14px;
+  padding-top: 12px;
+}
+
+.private-dataset-panel summary {
+  color: var(--accent);
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.private-dataset-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  margin: 12px 0;
+  align-items: end;
+}
+
+.private-dataset-actions {
+  display: flex;
+  gap: 10px;
 }
 
 .inline-status {
@@ -514,7 +539,8 @@ button:disabled {
 
   .workspace,
   .field-grid,
-  .comparable-search-header {
+  .comparable-search-header,
+  .private-dataset-grid {
     grid-template-columns: 1fr;
   }
 
@@ -524,7 +550,8 @@ button:disabled {
   .actions,
   .download-actions,
   .comparison-status,
-  .comparison-actions {
+  .comparison-actions,
+  .private-dataset-actions {
     align-items: stretch;
     flex-direction: column;
   }

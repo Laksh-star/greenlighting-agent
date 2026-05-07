@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 from config import OUTPUT_DIR
 from main import GreenlightingCLI, parse_comparables
 from tools.tmdb_tools import tmdb_client
+from tools.private_dataset import PRIVATE_DATASET_SAMPLE, private_dataset_store
 from utils.batch import build_batch_summary_row, load_batch_projects_from_text, save_batch_summary
 from utils.sample_data import SAMPLE_PROJECT
 
@@ -100,6 +101,8 @@ class AnalysisRequest(BaseModel):
     comparables: str = ""
     target_audience: str = "general"
     demo_mode: bool = False
+    comparable_source: str = Field("tmdb", pattern="^(tmdb|private|both)$")
+    private_dataset_id: str = ""
 
 
 class BatchAnalysisRequest(BaseModel):
@@ -135,31 +138,39 @@ async def sample_batch():
     return {"csv_text": sample_csv}
 
 
-@app.get("/api/comparables/search")
-async def search_comparables(q: str = Query(..., min_length=2), limit: int = Query(6, ge=1, le=10)):
-    """Search TMDB for comparable title candidates."""
-    try:
-        matches = tmdb_client.search_movie(q)[:limit]
-        results = []
-        for match in matches:
-            details = {}
-            movie_id = match.get("id")
-            if movie_id:
-                try:
-                    details = tmdb_client.get_movie_details(movie_id)
-                except Exception:
-                    details = {}
-            results.append(_format_comparable_search_result(match, details))
-        if results:
-            return {"results": results, "source": "tmdb"}
-    except Exception as exc:
-        return {
-            "results": _fallback_comparable_search(q, limit),
-            "source": "demo fallback",
-            "warning": f"TMDB search unavailable: {exc}",
-        }
+@app.get("/api/private-datasets/sample")
+async def private_dataset_sample():
+    """Return a sample private dataset CSV."""
+    return {"csv_text": PRIVATE_DATASET_SAMPLE}
 
-    return {"results": _fallback_comparable_search(q, limit), "source": "demo fallback"}
+
+@app.get("/api/private-datasets")
+async def list_private_datasets():
+    """List locally saved private datasets."""
+    return {"datasets": private_dataset_store.list_datasets()}
+
+
+class PrivateDatasetRequest(BaseModel):
+    name: str = Field(..., min_length=1)
+    csv_text: str = Field(..., min_length=20)
+
+
+@app.post("/api/private-datasets")
+async def save_private_dataset(request: PrivateDatasetRequest):
+    """Save a private dataset locally."""
+    metadata = private_dataset_store.save_dataset(request.name, request.csv_text)
+    return {"dataset": metadata}
+
+
+@app.get("/api/comparables/search")
+async def search_comparables(
+    q: str = Query(..., min_length=2),
+    limit: int = Query(6, ge=1, le=10),
+    source: str = Query("tmdb", pattern="^(tmdb|private|both)$"),
+    dataset_id: str = "",
+):
+    """Search TMDB and/or private datasets for comparable title candidates."""
+    return _search_comparable_sources(q, limit, source, dataset_id)
 
 
 @app.post("/api/analyze")
@@ -317,14 +328,24 @@ async def _run_analysis(job_id: str, request: AnalysisRequest):
     cli = GreenlightingCLI(progress_callback=progress_callback)
 
     try:
+        comparable_titles = parse_comparables(request.comparables)
+        comparable_evidence, market_data_warning = _build_private_comparable_evidence(
+            comparable_titles,
+            request.comparable_source,
+            request.private_dataset_id,
+        )
         result = await cli.analyze_project(
             description=request.description,
             budget=request.budget,
             genre=request.genre,
             platform=request.platform,
-            comparables=parse_comparables(request.comparables),
+            comparables=comparable_titles,
             target_audience=request.target_audience,
             demo_mode=request.demo_mode,
+            comparable_evidence=comparable_evidence,
+            market_data_warning=market_data_warning,
+            comparable_source=request.comparable_source,
+            private_dataset_id=request.private_dataset_id,
         )
         JOBS[job_id]["result"] = result
         JOBS[job_id]["status"] = "completed"
@@ -400,6 +421,108 @@ def _make_batch_progress_callback(job_id: str, project_index: int, project_total
         )
 
     return progress_callback
+
+
+def _search_comparable_sources(query: str, limit: int, source: str, dataset_id: str) -> Dict[str, Any]:
+    results = []
+    warnings = []
+    sources = []
+
+    if source in ("private", "both"):
+        private_rows = private_dataset_store.search(query, dataset_id=dataset_id, limit=limit)
+        if private_rows:
+            results.extend(private_rows)
+            sources.append("private dataset")
+        elif source == "private":
+            warnings.append("No private dataset matches found.")
+
+    if source in ("tmdb", "both") and len(results) < limit:
+        try:
+            tmdb_rows = _search_tmdb_comparables(query, limit - len(results))
+            if tmdb_rows:
+                results.extend(tmdb_rows)
+                sources.append("tmdb")
+        except Exception as exc:
+            warnings.append(f"TMDB search unavailable: {exc}")
+
+    if not results:
+        results = _fallback_comparable_search(query, limit)
+        sources.append("demo fallback")
+
+    return {
+        "results": results[:limit],
+        "source": " + ".join(dict.fromkeys(sources)),
+        "warning": " ".join(warnings),
+    }
+
+
+def _search_tmdb_comparables(query: str, limit: int) -> list:
+    matches = tmdb_client.search_movie(query)[:limit]
+    results = []
+    for match in matches:
+        details = {}
+        movie_id = match.get("id")
+        if movie_id:
+            try:
+                details = tmdb_client.get_movie_details(movie_id)
+            except Exception:
+                details = {}
+        results.append(_format_comparable_search_result(match, details))
+    return results
+
+
+def _build_private_comparable_evidence(
+    comparable_titles: list,
+    comparable_source: str,
+    dataset_id: str,
+) -> tuple:
+    if comparable_source not in ("private", "both") or not comparable_titles:
+        return None, ""
+
+    private_evidence = private_dataset_store.comparable_evidence_for_titles(
+        comparable_titles,
+        dataset_id=dataset_id,
+    )
+    found_titles = {item["title"].lower() for item in private_evidence}
+    missing = [
+        title
+        for title in comparable_titles
+        if title.lower() not in found_titles
+    ]
+
+    warning = ""
+    if missing and comparable_source == "private":
+        warning = (
+            "Private dataset missing comparable rows for: "
+            + ", ".join(missing)
+        )
+        private_evidence.extend(_fallback_private_rows(missing))
+
+    if comparable_source == "both" and missing:
+        try:
+            private_evidence.extend(tmdb_client.enrich_comparable_titles(missing))
+        except Exception as exc:
+            warning = f"TMDB enrichment unavailable for private+TMDB mode: {exc}"
+            private_evidence.extend(_fallback_private_rows(missing))
+
+    return private_evidence if private_evidence else None, warning
+
+
+def _fallback_private_rows(titles: list) -> list:
+    return [
+        {
+            "title": title,
+            "year": "n/a",
+            "budget": 0,
+            "revenue": 0,
+            "roi": 0.0,
+            "rating": 0,
+            "popularity": 0,
+            "similar_titles": [],
+            "source": "private dataset missing",
+        }
+        for title in titles
+    ]
 
 
 def _format_comparable_search_result(match: Dict[str, Any], details: Dict[str, Any]) -> Dict[str, Any]:

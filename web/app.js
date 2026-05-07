@@ -23,6 +23,13 @@ const searchComparables = document.querySelector("#search-comparables");
 const comparableSearchStatus = document.querySelector("#comparable-search-status");
 const selectedComparables = document.querySelector("#selected-comparables");
 const comparableResults = document.querySelector("#comparable-results");
+const comparableSource = document.querySelector("#comparable-source");
+const privateDatasetSelect = document.querySelector("#private-dataset-select");
+const privateDatasetName = document.querySelector("#private-dataset-name");
+const privateDatasetCsv = document.querySelector("#private-dataset-csv");
+const loadPrivateSample = document.querySelector("#load-private-sample");
+const savePrivateDataset = document.querySelector("#save-private-dataset");
+const privateDatasetStatus = document.querySelector("#private-dataset-status");
 
 let currentJobId = "";
 let currentBatchJobId = "";
@@ -66,6 +73,17 @@ searchComparables.addEventListener("click", async () => {
   await runComparableSearch();
 });
 
+loadPrivateSample.addEventListener("click", async () => {
+  const response = await fetch("/api/private-datasets/sample");
+  const sample = await response.json();
+  privateDatasetCsv.value = sample.csv_text;
+  privateDatasetStatus.textContent = "Sample private dataset loaded.";
+});
+
+savePrivateDataset.addEventListener("click", async () => {
+  await saveCurrentPrivateDataset();
+});
+
 comparableQuery.addEventListener("keydown", async (event) => {
   if (event.key === "Enter") {
     event.preventDefault();
@@ -86,7 +104,9 @@ form.addEventListener("submit", async (event) => {
     platform: value("platform") || "theatrical",
     comparables: value("comparables"),
     target_audience: value("target-audience") || "general",
-    demo_mode: document.querySelector("#demo-mode").checked
+    demo_mode: document.querySelector("#demo-mode").checked,
+    comparable_source: comparableSource.value,
+    private_dataset_id: privateDatasetSelect.value
   };
 
   try {
@@ -306,7 +326,12 @@ async function runComparableSearch() {
   comparableResults.innerHTML = "";
 
   try {
-    const response = await fetch(`/api/comparables/search?q=${encodeURIComponent(query)}`);
+    const params = new URLSearchParams({
+      q: query,
+      source: comparableSource.value,
+      dataset_id: privateDatasetSelect.value
+    });
+    const response = await fetch(`/api/comparables/search?${params.toString()}`);
     if (!response.ok) {
       throw new Error(await response.text());
     }
@@ -318,6 +343,51 @@ async function runComparableSearch() {
     comparableResults.innerHTML = `<p class="placeholder">${escapeHtml(error.message)}</p>`;
   } finally {
     searchComparables.disabled = false;
+  }
+}
+
+async function saveCurrentPrivateDataset() {
+  if (!privateDatasetCsv.value.trim()) {
+    privateDatasetStatus.textContent = "Paste dataset CSV before saving.";
+    return;
+  }
+  savePrivateDataset.disabled = true;
+  privateDatasetStatus.textContent = "Saving private dataset";
+  try {
+    const response = await fetch("/api/private-datasets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: privateDatasetName.value || "Studio Dataset",
+        csv_text: privateDatasetCsv.value
+      })
+    });
+    if (!response.ok) {
+      throw new Error(await response.text());
+    }
+    const payload = await response.json();
+    privateDatasetStatus.textContent = `Saved ${payload.dataset.row_count} rows as ${payload.dataset.name}`;
+    await loadPrivateDatasets(payload.dataset.id);
+    comparableSource.value = "private";
+  } catch (error) {
+    privateDatasetStatus.textContent = `Save failed: ${error.message}`;
+  } finally {
+    savePrivateDataset.disabled = false;
+  }
+}
+
+async function loadPrivateDatasets(selectedId = "") {
+  const response = await fetch("/api/private-datasets");
+  const payload = await response.json();
+  privateDatasetSelect.innerHTML = `<option value="">All local datasets</option>`;
+  for (const dataset of payload.datasets) {
+    const option = document.createElement("option");
+    option.value = dataset.id;
+    option.textContent = `${dataset.name} (${dataset.row_count})`;
+    privateDatasetSelect.appendChild(option);
+  }
+  if (selectedId) {
+    privateDatasetSelect.value = selectedId;
   }
 }
 
@@ -566,3 +636,4 @@ function truncate(text, maxLength) {
 
 sampleButton.click();
 loadBatchSample.click();
+loadPrivateDatasets();

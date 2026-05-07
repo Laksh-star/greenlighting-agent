@@ -46,6 +46,8 @@ class MarketResearchAgent(BaseAgent):
                     "budget_category": self._categorize_budget(budget),
                     "comparables_count": len(comparable_evidence),
                     "comparable_evidence": comparable_evidence,
+                    "market_data_warning": project_data.get("market_data_warning", ""),
+                    "comparable_source": project_data.get("comparable_source", "tmdb"),
                 },
             )
 
