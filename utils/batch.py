@@ -4,6 +4,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, List
 import csv
+import io
 import json
 
 from config import BATCHES_DIR
@@ -26,7 +27,12 @@ BATCH_COLUMNS = [
 def load_batch_projects(csv_path: Path) -> List[Dict[str, Any]]:
     """Load batch project rows from a CSV file."""
     with open(csv_path, newline="") as f:
-        rows = list(csv.DictReader(f))
+        return load_batch_projects_from_text(f.read())
+
+
+def load_batch_projects_from_text(csv_text: str) -> List[Dict[str, Any]]:
+    """Load batch project rows from CSV text."""
+    rows = list(csv.DictReader(io.StringIO(csv_text)))
 
     projects = []
     for index, row in enumerate(rows, start=1):

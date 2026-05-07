@@ -88,6 +88,30 @@
           <p class="placeholder">Run an analysis to preview the generated report.</p>
         </article>
       </section>
+
+      <section class="comparison-panel">
+        <div class="report-toolbar">
+          <div>
+            <h2>Project Comparison</h2>
+            <p>Paste CSV rows to compare multiple projects side by side.</p>
+          </div>
+          <div class="comparison-actions">
+            <button id="load-batch-sample" type="button" class="secondary">Load Batch Sample</button>
+            <button id="run-batch" type="button">Run Batch</button>
+          </div>
+        </div>
+        <textarea id="batch-csv" class="batch-input" rows="7"></textarea>
+        <div class="comparison-status">
+          <span id="batch-status">No batch run</span>
+          <span id="batch-downloads" class="hidden">
+            <a id="batch-csv-download" href="#">CSV</a>
+            <a id="batch-json-download" href="#">JSON</a>
+          </span>
+        </div>
+        <div id="comparison-table" class="comparison-table">
+          <p class="placeholder">Batch comparison results will appear here.</p>
+        </div>
+      </section>
     </main>
     <script src="/static/app.js"></script>
   </body>

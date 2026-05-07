@@ -16,7 +16,7 @@ from fastapi.testclient import TestClient
 from main import GreenlightingCLI, parse_comparables
 from tools.tmdb_tools import TMDBClient
 from utils.analysis_report import build_analysis_payload
-from utils.batch import build_batch_summary_row, load_batch_projects
+from utils.batch import build_batch_summary_row, load_batch_projects, load_batch_projects_from_text
 from utils.report_quality import validate_report_quality
 from utils.run_ledger import build_run_ledger, summarize_model_usage
 from web_app import JOBS, app
@@ -364,6 +364,18 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
         self.assertEqual(projects[0]["budget"], 18_000_000)
         self.assertEqual(projects[0]["comparables"], ["Ex Machina", "Moon", "Arrival"])
 
+    def test_load_batch_projects_from_text(self):
+        csv_text = (
+            "description,budget,genre,platform,comparables,target_audience\n"
+            "\"Small horror\",2500000,Horror,theatrical,\"Host,Paranormal Activity\",fans\n"
+        )
+
+        projects = load_batch_projects_from_text(csv_text)
+
+        self.assertEqual(projects[0]["description"], "Small horror")
+        self.assertEqual(projects[0]["budget"], 2_500_000)
+        self.assertEqual(projects[0]["comparables"], ["Host", "Paranormal Activity"])
+
     def test_batch_summary_row_extracts_metrics(self):
         results = {
             "requested_project_data": {
@@ -472,6 +484,32 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
         payload = response.json()
         self.assertIn("description", payload)
         self.assertIsInstance(payload["comparables"], str)
+
+    def test_web_sample_batch_endpoint_returns_csv(self):
+        client = TestClient(app)
+        response = client.get("/api/sample-batch")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertIn("description,budget,genre,platform", payload["csv_text"])
+
+    def test_web_batch_analyze_starts_job(self):
+        client = TestClient(app)
+        response = client.post(
+            "/api/batch-analyze",
+            json={
+                "csv_text": (
+                    "description,budget,genre,platform,comparables,target_audience\n"
+                    "\"Small horror\",2500000,Horror,theatrical,\"Host\",fans\n"
+                ),
+                "demo_mode": True,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertIn("job_id", payload)
+        self.assertEqual(JOBS[payload["job_id"]]["kind"], "batch")
 
     def test_web_events_stream_job_progress(self):
         client = TestClient(app)

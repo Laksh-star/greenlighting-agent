@@ -265,13 +265,102 @@ button:disabled {
   display: none;
 }
 
-.report-panel {
+.report-panel,
+.comparison-panel {
   margin-top: 18px;
+}
+
+.comparison-panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
 }
 
 .report-toolbar {
   border-bottom: 1px solid var(--line);
   padding: 16px 20px;
+}
+
+.comparison-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.batch-input {
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  min-height: 140px;
+}
+
+.comparison-status {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 20px;
+  color: var(--muted);
+  border-bottom: 1px solid var(--line);
+}
+
+.comparison-status a {
+  color: var(--accent);
+  font-weight: 800;
+  margin-left: 12px;
+}
+
+.comparison-table {
+  overflow-x: auto;
+  padding: 18px 20px 22px;
+}
+
+.comparison-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.comparison-table th,
+.comparison-table td {
+  border-bottom: 1px solid var(--line);
+  padding: 10px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.comparison-table th {
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.mini-pill {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 5px 8px;
+  white-space: nowrap;
+}
+
+.mini-pill.go {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+  background: var(--ink-soft);
+}
+
+.mini-pill.warn {
+  border-color: #e0a458;
+  color: var(--warn);
+  background: #fff5e5;
+}
+
+.mini-pill.no-go {
+  border-color: #d08c8c;
+  color: var(--danger);
+  background: #fff0f0;
 }
 
 .report-preview {
@@ -341,7 +430,9 @@ button:disabled {
   .status-header,
   .report-toolbar,
   .actions,
-  .download-actions {
+  .download-actions,
+  .comparison-status,
+  .comparison-actions {
     align-items: stretch;
     flex-direction: column;
   }

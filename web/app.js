@@ -10,9 +10,19 @@ const reportPreview = document.querySelector("#report-preview");
 const downloads = document.querySelector("#download-actions");
 const markdownDownload = document.querySelector("#markdown-download");
 const jsonDownload = document.querySelector("#json-download");
+const batchCsv = document.querySelector("#batch-csv");
+const loadBatchSample = document.querySelector("#load-batch-sample");
+const runBatch = document.querySelector("#run-batch");
+const batchStatus = document.querySelector("#batch-status");
+const batchDownloads = document.querySelector("#batch-downloads");
+const batchCsvDownload = document.querySelector("#batch-csv-download");
+const batchJsonDownload = document.querySelector("#batch-json-download");
+const comparisonTable = document.querySelector("#comparison-table");
 
 let currentJobId = "";
+let currentBatchJobId = "";
 let eventSource = null;
+let batchEventSource = null;
 let completedAgents = new Set();
 
 const agentLabels = {
@@ -36,6 +46,12 @@ sampleButton.addEventListener("click", async () => {
   setValue("target-audience", sample.target_audience);
   setValue("comparables", sample.comparables);
   document.querySelector("#demo-mode").checked = true;
+});
+
+loadBatchSample.addEventListener("click", async () => {
+  const response = await fetch("/api/sample-batch");
+  const sample = await response.json();
+  batchCsv.value = sample.csv_text;
 });
 
 form.addEventListener("submit", async (event) => {
@@ -79,6 +95,37 @@ refreshButton.addEventListener("click", async () => {
   }
 });
 
+runBatch.addEventListener("click", async () => {
+  if (!batchCsv.value.trim()) {
+    batchStatus.textContent = "Add CSV rows before running batch";
+    return;
+  }
+  resetBatchState();
+  runBatch.disabled = true;
+  batchStatus.textContent = "Starting batch";
+
+  try {
+    const response = await fetch("/api/batch-analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        csv_text: batchCsv.value,
+        demo_mode: document.querySelector("#demo-mode").checked
+      })
+    });
+    if (!response.ok) {
+      throw new Error(await response.text());
+    }
+    const body = await response.json();
+    currentBatchJobId = body.job_id;
+    connectBatchEvents(body.events_url);
+  } catch (error) {
+    batchStatus.textContent = "Batch failed";
+    comparisonTable.innerHTML = `<p class="placeholder">${escapeHtml(error.message)}</p>`;
+    runBatch.disabled = false;
+  }
+});
+
 function connectEvents(eventsUrl) {
   if (eventSource) {
     eventSource.close();
@@ -104,6 +151,31 @@ function connectEvents(eventsUrl) {
   };
 }
 
+function connectBatchEvents(eventsUrl) {
+  if (batchEventSource) {
+    batchEventSource.close();
+  }
+  batchEventSource = new EventSource(eventsUrl);
+  batchEventSource.onmessage = async (message) => {
+    const event = JSON.parse(message.data);
+    renderBatchEvent(event);
+    if (event.stage === "job" && event.status === "completed") {
+      batchEventSource.close();
+      await finishBatchJob();
+    }
+    if (event.stage === "job" && event.status === "failed") {
+      batchEventSource.close();
+      batchStatus.textContent = "Batch failed";
+      runBatch.disabled = false;
+    }
+  };
+  batchEventSource.onerror = () => {
+    batchEventSource.close();
+    batchStatus.textContent = "Batch stream disconnected";
+    runBatch.disabled = false;
+  };
+}
+
 async function finishJob() {
   const response = await fetch(`/api/jobs/${currentJobId}`);
   const job = await response.json();
@@ -115,6 +187,17 @@ async function finishJob() {
   jsonDownload.href = job.download_json_url;
   downloads.classList.remove("hidden");
   await loadReport(currentJobId);
+}
+
+async function finishBatchJob() {
+  const response = await fetch(`/api/jobs/${currentBatchJobId}`);
+  const job = await response.json();
+  batchStatus.textContent = `Completed ${job.rows.length} projects`;
+  runBatch.disabled = false;
+  batchCsvDownload.href = job.download_batch_csv_url;
+  batchJsonDownload.href = job.download_batch_json_url;
+  batchDownloads.classList.remove("hidden");
+  comparisonTable.innerHTML = renderComparisonTable(job.rows);
 }
 
 async function loadReport(jobId) {
@@ -148,6 +231,51 @@ function renderEvent(event) {
   }
 }
 
+function renderBatchEvent(event) {
+  if (event.stage === "batch_project") {
+    batchStatus.textContent = `${event.name} ${event.status}`;
+  }
+  if (event.stage === "job" && event.status === "started") {
+    batchStatus.textContent = `Running ${event.total || ""} projects`;
+  }
+  if (event.stage === "job" && event.status === "completed") {
+    batchStatus.textContent = "Batch complete";
+  }
+}
+
+function renderComparisonTable(rows) {
+  if (!rows.length) {
+    return `<p class="placeholder">No comparison rows returned.</p>`;
+  }
+  const tableRows = rows.map((row) => `
+    <tr>
+      <td>${escapeHtml(row.project_name)}</td>
+      <td><span class="mini-pill ${recommendationClass(row.recommendation)}">${escapeHtml(row.recommendation)}</span></td>
+      <td>${Math.round((Number(row.confidence) || 0) * 100)}%</td>
+      <td>${escapeHtml(row.moderate_roi || "n/a")}</td>
+      <td>${escapeHtml(row.risk_level || "n/a")}</td>
+      <td>${escapeHtml(row.overall_risk_score || "n/a")}</td>
+      <td><a href="/api/output?path=${encodeURIComponent(row.report_path)}">Report</a></td>
+    </tr>
+  `).join("");
+  return `
+    <table>
+      <thead>
+        <tr>
+          <th>Project</th>
+          <th>Recommendation</th>
+          <th>Confidence</th>
+          <th>ROI</th>
+          <th>Risk</th>
+          <th>Risk Score</th>
+          <th>Output</th>
+        </tr>
+      </thead>
+      <tbody>${tableRows}</tbody>
+    </table>
+  `;
+}
+
 function addEvent(title, detail) {
   const item = document.createElement("li");
   item.innerHTML = `<strong>${escapeHtml(title)}</strong><span>${escapeHtml(detail)}</span>`;
@@ -179,6 +307,25 @@ function resetRunState() {
   downloads.classList.add("hidden");
   refreshButton.disabled = true;
   reportPreview.innerHTML = `<p class="placeholder">Report will appear when the run completes.</p>`;
+}
+
+function resetBatchState() {
+  if (batchEventSource) {
+    batchEventSource.close();
+  }
+  currentBatchJobId = "";
+  batchDownloads.classList.add("hidden");
+  comparisonTable.innerHTML = `<p class="placeholder">Batch is running.</p>`;
+}
+
+function recommendationClass(recommendation) {
+  if (recommendation === "GO") {
+    return "go";
+  }
+  if (recommendation === "NO-GO") {
+    return "no-go";
+  }
+  return "warn";
 }
 
 function renderMarkdown(markdown) {
@@ -278,3 +425,4 @@ function setValue(id, nextValue) {
 }
 
 sampleButton.click();
+loadBatchSample.click();

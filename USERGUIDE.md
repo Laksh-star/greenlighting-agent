@@ -63,6 +63,7 @@ The web UI supports:
 - demo-mode toggle
 - live agent progress stream
 - rendered report preview
+- project comparison table from pasted CSV
 - Markdown download
 - JSON download
 
@@ -74,6 +75,14 @@ Recommended first run:
 4. Wait for the progress panel to show **Completed**.
 5. Review the report preview.
 6. Download Markdown or JSON if needed.
+
+Project comparison run:
+
+1. Scroll to **Project Comparison**.
+2. Click **Load Batch Sample** or paste CSV rows with the documented batch columns.
+3. Click **Run Batch**.
+4. Review the comparison table for recommendation, confidence, ROI, risk level, and report links.
+5. Download the batch CSV or JSON summary if needed.
 
 ## 3. CLI Usage
 
@@ -282,4 +291,3 @@ http://127.0.0.1:8001
 - Keep project descriptions specific: hook, setting, audience, and production constraints help.
 - Use `--sample` before live analysis to confirm local setup.
 - Use batch mode to compare multiple project ideas quickly.
-

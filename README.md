@@ -17,7 +17,7 @@ AI-assisted greenlight analysis for film and TV projects. The app combines compa
 
 ## Highlights
 
-- **Local web demo:** FastAPI + HTML UI with a project form, live agent progress, report preview, and Markdown/JSON downloads.
+- **Local web demo:** FastAPI + HTML UI with a project form, live agent progress, report preview, comparison table, and Markdown/JSON downloads.
 - **CLI-first workflow:** Run one-off, sample, interactive, or batch analyses from the terminal.
 - **Six analysis agents:** Market research, audience intelligence, financial modeling, competitive analysis, creative assessment, and risk analysis.
 - **Master synthesis:** Produces a final recommendation, confidence score, executive summary, and decision drivers.
@@ -25,6 +25,7 @@ AI-assisted greenlight analysis for film and TV projects. The app combines compa
 - **No-key demo mode:** Generates deterministic sample reports without Anthropic or TMDB credentials.
 - **Report quality controls:** Blocks incomplete reports before save and warns when comparables fall back to input-only data.
 - **Audit artifacts:** Writes Markdown, structured JSON, run ledgers, token usage, estimated Anthropic cost, and batch summaries.
+- **Project comparison:** Run a pasted CSV batch from the browser and compare recommendations, confidence, ROI, and risk.
 
 ## Demo Screenshots
 
