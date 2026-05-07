@@ -130,7 +130,8 @@ Report history:
 2. Click **Refresh History** if you generated reports after opening the page.
 3. Click **Open** to preview an older report.
 4. Select multiple **Compare** checkboxes and click **Compare Selected** for a side-by-side table.
-5. Use **Markdown** or **JSON** links to download the saved artifacts.
+5. Use **Brief** to download a compact studio decision memo.
+6. Use **Markdown** or **JSON** links to download the saved artifacts.
 
 Project comparison run:
 

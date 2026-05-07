@@ -22,6 +22,7 @@ from utils.report_quality import validate_report_quality
 from utils.report_library import list_report_summaries, load_report_detail
 from utils.run_ledger import build_run_ledger, summarize_model_usage
 from utils.source_material import build_source_material_payload
+from utils.studio_brief import build_studio_brief
 from web_app import JOBS, app
 
 
@@ -296,6 +297,32 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
         self.assertEqual(summaries[0]["budget"], 0)
         self.assertEqual(summaries[0]["overall_risk_score"], "")
         self.assertEqual(detail["markdown"], "# Sample Report")
+
+    def test_studio_brief_generates_decision_memo(self):
+        payload = {
+            "project": {
+                "description": "Contained thriller",
+                "budget": 5_000_000,
+                "genre": "Thriller",
+                "platform": "hybrid",
+            },
+            "recommendation": "GO",
+            "confidence": 0.91,
+            "summary": "Strong package with manageable downside.",
+            "decision_drivers": ["Clear hook", "Disciplined budget"],
+            "comparable_evidence": [
+                {"title": "Comp A", "budget": 1_000_000, "revenue": 5_000_000, "roi": 400}
+            ],
+            "financial_scenarios": {"moderate_roi": 42, "total_exposure": 7_000_000},
+            "financial_assumptions": {"risk_tolerance": "balanced"},
+            "risk_matrix": {"risk_level": "Low Risk", "overall_risk_score": 3.2},
+        }
+
+        brief = build_studio_brief(payload)
+
+        self.assertIn("# Studio Greenlight Brief", brief)
+        self.assertIn("**Recommendation:** GO", brief)
+        self.assertIn("Comp A", brief)
 
     def _quality_results(self, recommendation="CONDITIONAL GO", analysis=None):
         return {
@@ -690,6 +717,26 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("reports", response.json())
+
+    def test_web_report_brief_endpoint(self):
+        report_dir = Path("outputs/reports")
+        report_dir.mkdir(parents=True, exist_ok=True)
+        report_id = "unit_brief_report"
+        payload = {
+            "project": {"description": "Brief project", "budget": 1_000_000},
+            "recommendation": "CONDITIONAL GO",
+            "confidence": 0.8,
+            "financial_scenarios": {},
+            "risk_matrix": {},
+        }
+        (report_dir / f"{report_id}.json").write_text(json.dumps(payload))
+        (report_dir / f"{report_id}.md").write_text("# Full Report")
+
+        client = TestClient(app)
+        response = client.get(f"/api/reports/{report_id}/brief")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Studio Greenlight Brief", response.text)
 
     def test_web_batch_analyze_starts_job(self):
         client = TestClient(app)

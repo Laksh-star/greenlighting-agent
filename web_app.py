@@ -20,6 +20,7 @@ from utils.batch import build_batch_summary_row, load_batch_projects_from_text, 
 from utils.report_library import list_report_summaries, load_report_detail
 from utils.sample_data import SAMPLE_PROJECT
 from utils.source_material import build_source_material_payload
+from utils.studio_brief import build_studio_brief
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -336,6 +337,23 @@ async def report_detail(report_id: str):
         raise HTTPException(status_code=404, detail="Report not found")
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid report id")
+
+
+@app.get("/api/reports/{report_id}/brief")
+async def report_brief(report_id: str):
+    """Return a compact studio brief generated from one saved report."""
+    try:
+        detail = load_report_detail(OUTPUT_DIR, report_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Report not found")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid report id")
+    filename = f"{report_id}_brief.md"
+    return PlainTextResponse(
+        build_studio_brief(detail["payload"]),
+        media_type="text/markdown",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 async def _run_analysis(job_id: str, request: AnalysisRequest):

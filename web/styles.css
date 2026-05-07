@@ -542,6 +542,13 @@ button:disabled {
   vertical-align: middle;
 }
 
+.comparison-table td a {
+  color: var(--accent);
+  font-weight: 800;
+  margin-left: 8px;
+  text-decoration: none;
+}
+
 .comparison-table th {
   color: var(--muted);
   font-size: 12px;
