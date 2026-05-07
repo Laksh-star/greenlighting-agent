@@ -119,6 +119,12 @@ def _check_financial_scenarios(
     if "### Financial Scenario Snapshot" not in markdown_report:
         errors.append("Financial scenario section is missing from the Markdown report.")
 
+    if "### Model Assumptions" not in markdown_report:
+        errors.append("Model assumptions section is missing from the Markdown report.")
+
+    if "### Break-even Analysis" not in markdown_report:
+        errors.append("Break-even analysis section is missing from the Markdown report.")
+
 
 def _check_risk_matrix(
     markdown_report: str,

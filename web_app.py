@@ -103,6 +103,15 @@ class AnalysisRequest(BaseModel):
     demo_mode: bool = False
     comparable_source: str = Field("tmdb", pattern="^(tmdb|private|both)$")
     private_dataset_id: str = ""
+    marketing_spend: int = Field(0, ge=0)
+    distribution_fee_pct: float = Field(0.12, ge=0, le=0.5)
+    theatrical_revenue_share: float = Field(0.5, ge=0, le=1)
+    streaming_license_value: int = Field(0, ge=0)
+    subscriber_lifetime_value: int = Field(120, ge=1)
+    downside_revenue_multiplier: float = Field(0, ge=0)
+    base_revenue_multiplier: float = Field(0, ge=0)
+    upside_revenue_multiplier: float = Field(0, ge=0)
+    risk_tolerance: str = Field("balanced", pattern="^(conservative|balanced|aggressive)$")
 
 
 class BatchAnalysisRequest(BaseModel):
@@ -346,6 +355,17 @@ async def _run_analysis(job_id: str, request: AnalysisRequest):
             market_data_warning=market_data_warning,
             comparable_source=request.comparable_source,
             private_dataset_id=request.private_dataset_id,
+            financial_assumptions={
+                "marketing_spend": request.marketing_spend,
+                "distribution_fee_pct": request.distribution_fee_pct,
+                "theatrical_revenue_share": request.theatrical_revenue_share,
+                "streaming_license_value": request.streaming_license_value,
+                "subscriber_lifetime_value": request.subscriber_lifetime_value,
+                "downside_revenue_multiplier": request.downside_revenue_multiplier,
+                "base_revenue_multiplier": request.base_revenue_multiplier,
+                "upside_revenue_multiplier": request.upside_revenue_multiplier,
+                "risk_tolerance": request.risk_tolerance,
+            },
         )
         JOBS[job_id]["result"] = result
         JOBS[job_id]["status"] = "completed"

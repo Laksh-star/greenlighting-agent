@@ -49,6 +49,13 @@ def build_analysis_payload(
             "basic_metrics",
             {},
         ),
+        "financial_assumptions": _agent_metadata(results, "financial_model").get(
+            "assumptions",
+            {},
+        ),
+        "sensitivity_table": _agent_metadata(results, "financial_model")
+        .get("basic_metrics", {})
+        .get("sensitivity_table", []),
         "risk_matrix": {
             "overall_risk_score": _agent_metadata(results, "risk_analysis").get(
                 "overall_risk_score",

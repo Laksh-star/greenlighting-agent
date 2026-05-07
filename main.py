@@ -50,6 +50,7 @@ class GreenlightingCLI:
         market_data_warning: str = "",
         comparable_source: str = "tmdb",
         private_dataset_id: str = "",
+        financial_assumptions: Dict[str, Any] = None,
     ) -> Dict[str, Any]:
         """
         Run full greenlighting analysis.
@@ -76,6 +77,7 @@ class GreenlightingCLI:
             'demo_mode': demo_mode,
             'comparable_source': comparable_source,
             'private_dataset_id': private_dataset_id,
+            'financial_assumptions': financial_assumptions or {},
         }
         if comparable_evidence is not None:
             project_data["comparable_evidence"] = comparable_evidence
@@ -218,9 +220,28 @@ class GreenlightingCLI:
 
         financial_metrics = self._get_financial_metrics(results)
         if financial_metrics:
+            assumptions = financial_metrics.get("assumptions", {})
+            if assumptions:
+                lines.append("### Model Assumptions")
+                lines.append("")
+                lines.extend(self._format_model_assumptions(assumptions))
+                lines.append("")
+
             lines.append("### Financial Scenario Snapshot")
             lines.append("")
             lines.extend(self._format_financial_metrics(financial_metrics))
+            lines.append("")
+
+            sensitivity = financial_metrics.get("sensitivity_table", [])
+            if sensitivity:
+                lines.append("### Sensitivity Table")
+                lines.append("")
+                lines.extend(self._format_sensitivity_table(sensitivity))
+                lines.append("")
+
+            lines.append("### Break-even Analysis")
+            lines.append("")
+            lines.extend(self._format_break_even(financial_metrics))
             lines.append("")
 
         risk_metadata = self._get_agent_metadata(results, "risk_analysis")
@@ -304,7 +325,7 @@ class GreenlightingCLI:
             if revenue_key in metrics:
                 rows.append(
                     f"- **{label}:** {format_currency(metrics.get(revenue_key, 0))} "
-                    f"revenue, {metrics.get(roi_key, 0)}% ROI"
+                    f"gross revenue, {metrics.get(roi_key, 0)}% net ROI"
                 )
         if "estimated_new_subscribers" in metrics:
             rows.append(f"- **Estimated new subscribers:** {metrics['estimated_new_subscribers']:,}")
@@ -315,6 +336,63 @@ class GreenlightingCLI:
                 f"- **Comparable average revenue:** "
                 f"{format_currency(metrics['comparable_average_revenue'])}"
             )
+        return rows
+
+    def _format_model_assumptions(self, assumptions: Dict[str, Any]) -> list:
+        return [
+            f"- **Marketing / P&A:** {format_currency(assumptions.get('marketing_spend', 0))}",
+            f"- **Distribution fee:** {assumptions.get('distribution_fee_pct', 0) * 100:.1f}%",
+            f"- **Theatrical revenue share:** {assumptions.get('theatrical_revenue_share', 0) * 100:.1f}%",
+            f"- **Streaming/license value:** {format_currency(assumptions.get('streaming_license_value', 0))}",
+            f"- **Risk tolerance:** {assumptions.get('risk_tolerance', 'balanced')}",
+        ]
+
+    def _format_sensitivity_table(self, rows: list) -> list:
+        has_subscribers = any("subscribers" in row for row in rows)
+        if has_subscribers:
+            lines = [
+                "| Scenario | Subscribers | Net Revenue | ROI |",
+                "| --- | ---: | ---: | ---: |",
+            ]
+            for row in rows:
+                lines.append(
+                    f"| {row.get('scenario', 'n/a')} | "
+                    f"{row.get('subscribers', 0):,} | "
+                    f"{format_currency(row.get('net_revenue', 0) or 0)} | "
+                    f"{row.get('roi', 0)}% |"
+                )
+            return lines
+
+        lines = [
+            "| Scenario | Gross Revenue | Net Revenue | ROI |",
+            "| --- | ---: | ---: | ---: |",
+        ]
+        for row in rows:
+            lines.append(
+                f"| {row.get('scenario', 'n/a')} | "
+                f"{format_currency(row.get('gross_revenue', 0) or 0)} | "
+                f"{format_currency(row.get('net_revenue', 0) or 0)} | "
+                f"{row.get('roi', 0)}% |"
+            )
+        return lines
+
+    def _format_break_even(self, metrics: Dict[str, Any]) -> list:
+        rows = []
+        if metrics.get("total_exposure") is not None:
+            rows.append(f"- **Total exposure:** {format_currency(metrics.get('total_exposure', 0))}")
+        if metrics.get("break_even_revenue") is not None:
+            rows.append(f"- **Break-even gross revenue:** {format_currency(metrics.get('break_even_revenue', 0))}")
+        if metrics.get("break_even_subscribers") is not None:
+            rows.append(f"- **Break-even subscribers:** {metrics.get('break_even_subscribers', 0):,}")
+        thresholds = metrics.get("decision_thresholds", {})
+        if thresholds:
+            rows.append(
+                "- **Decision thresholds:** "
+                f"GO at {thresholds.get('go_roi')}% ROI, "
+                f"CONDITIONAL GO at {thresholds.get('conditional_roi')}% ROI"
+            )
+        if not rows:
+            rows.append("- Break-even calculation unavailable.")
         return rows
 
     def _format_risk_matrix(self, metadata: Dict[str, Any]) -> list:
@@ -525,6 +603,22 @@ async def main():
         default='general',
         help='Target demographic or audience segment'
     )
+
+    parser.add_argument('--marketing-spend', type=int, default=0, help='Marketing/P&A spend in dollars')
+    parser.add_argument('--distribution-fee-pct', type=float, default=0.12, help='Distribution fee as decimal, e.g. 0.12')
+    parser.add_argument('--theatrical-revenue-share', type=float, default=0.5, help='Theatrical revenue share as decimal')
+    parser.add_argument('--streaming-license-value', type=int, default=0, help='Streaming/license value in dollars')
+    parser.add_argument('--subscriber-lifetime-value', type=int, default=120, help='Subscriber lifetime value for streaming model')
+    parser.add_argument('--downside-revenue-multiplier', type=float, default=0, help='Override downside gross revenue multiple')
+    parser.add_argument('--base-revenue-multiplier', type=float, default=0, help='Override base gross revenue multiple')
+    parser.add_argument('--upside-revenue-multiplier', type=float, default=0, help='Override upside gross revenue multiple')
+    parser.add_argument(
+        '--risk-tolerance',
+        type=str,
+        default='balanced',
+        choices=['conservative', 'balanced', 'aggressive'],
+        help='Financial decision threshold profile'
+    )
     
     parser.add_argument(
         '--interactive',
@@ -559,6 +653,17 @@ async def main():
             platform=args.platform,
             comparables=parse_comparables(args.comparables),
             target_audience=args.target_audience,
+            financial_assumptions={
+                "marketing_spend": args.marketing_spend,
+                "distribution_fee_pct": args.distribution_fee_pct,
+                "theatrical_revenue_share": args.theatrical_revenue_share,
+                "streaming_license_value": args.streaming_license_value,
+                "subscriber_lifetime_value": args.subscriber_lifetime_value,
+                "downside_revenue_multiplier": args.downside_revenue_multiplier,
+                "base_revenue_multiplier": args.base_revenue_multiplier,
+                "upside_revenue_multiplier": args.upside_revenue_multiplier,
+                "risk_tolerance": args.risk_tolerance,
+            },
         )
 
 

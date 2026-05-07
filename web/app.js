@@ -30,6 +30,17 @@ const privateDatasetCsv = document.querySelector("#private-dataset-csv");
 const loadPrivateSample = document.querySelector("#load-private-sample");
 const savePrivateDataset = document.querySelector("#save-private-dataset");
 const privateDatasetStatus = document.querySelector("#private-dataset-status");
+const assumptionInputs = {
+  marketingSpend: document.querySelector("#marketing-spend"),
+  distributionFeePct: document.querySelector("#distribution-fee-pct"),
+  theatricalRevenueShare: document.querySelector("#theatrical-revenue-share"),
+  streamingLicenseValue: document.querySelector("#streaming-license-value"),
+  subscriberLifetimeValue: document.querySelector("#subscriber-lifetime-value"),
+  downsideRevenueMultiplier: document.querySelector("#downside-revenue-multiplier"),
+  baseRevenueMultiplier: document.querySelector("#base-revenue-multiplier"),
+  upsideRevenueMultiplier: document.querySelector("#upside-revenue-multiplier"),
+  riskTolerance: document.querySelector("#risk-tolerance")
+};
 
 let currentJobId = "";
 let currentBatchJobId = "";
@@ -106,7 +117,16 @@ form.addEventListener("submit", async (event) => {
     target_audience: value("target-audience") || "general",
     demo_mode: document.querySelector("#demo-mode").checked,
     comparable_source: comparableSource.value,
-    private_dataset_id: privateDatasetSelect.value
+    private_dataset_id: privateDatasetSelect.value,
+    marketing_spend: numberValue(assumptionInputs.marketingSpend),
+    distribution_fee_pct: numberValue(assumptionInputs.distributionFeePct, 0.12),
+    theatrical_revenue_share: numberValue(assumptionInputs.theatricalRevenueShare, 0.5),
+    streaming_license_value: numberValue(assumptionInputs.streamingLicenseValue),
+    subscriber_lifetime_value: numberValue(assumptionInputs.subscriberLifetimeValue, 120),
+    downside_revenue_multiplier: numberValue(assumptionInputs.downsideRevenueMultiplier),
+    base_revenue_multiplier: numberValue(assumptionInputs.baseRevenueMultiplier),
+    upside_revenue_multiplier: numberValue(assumptionInputs.upsideRevenueMultiplier),
+    risk_tolerance: assumptionInputs.riskTolerance.value
   };
 
   try {
@@ -599,6 +619,11 @@ function escapeHtml(valueToEscape) {
 
 function value(id) {
   return document.querySelector(`#${id}`).value.trim();
+}
+
+function numberValue(input, fallback = 0) {
+  const parsed = Number(input.value);
+  return Number.isFinite(parsed) ? parsed : fallback;
 }
 
 function setValue(id, nextValue) {

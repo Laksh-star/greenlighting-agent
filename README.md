@@ -24,6 +24,7 @@ AI-assisted greenlight analysis for film and TV projects. The app combines compa
 - **TMDB enrichment:** Uses TMDB to enrich supplied comparable titles when `TMDB_API_KEY` is configured.
 - **Comparable search:** Search/select TMDB titles from the browser and auto-fill the analysis comparables.
 - **Private dataset mode:** Save local studio datasets and run comparable search/analysis with private comps, TMDB, or both.
+- **Assumption controls:** Tune P&A, distribution fee, revenue share, streamer value, scenario multiples, and risk tolerance.
 - **No-key demo mode:** Generates deterministic sample reports without Anthropic or TMDB credentials.
 - **Report quality controls:** Blocks incomplete reports before save and warns when comparables fall back to input-only data.
 - **Audit artifacts:** Writes Markdown, structured JSON, run ledgers, token usage, estimated Anthropic cost, and batch summaries.
@@ -78,7 +79,10 @@ python main.py \
   --genre "Science Fiction" \
   --platform hybrid \
   --comparables "Ex Machina,Moon,Arrival" \
-  --target-audience "adults 18-49, sci-fi thriller fans"
+  --target-audience "adults 18-49, sci-fi thriller fans" \
+  --marketing-spend 9000000 \
+  --base-revenue-multiplier 2.6 \
+  --risk-tolerance balanced
 ```
 
 Run batch mode:
@@ -104,7 +108,7 @@ flowchart LR
     Entry --> Master["Master Orchestrator"]
     Master --> Market["Market Research"]
     Market --> TMDB["TMDB API\noptional enrichment"]
-    Market --> Finance["Financial Modeling"]
+    Market --> Finance["Financial Modeling\nAssumption Controls"]
     Market --> Audience["Audience Intelligence"]
     Market --> Competitive["Competitive Analysis"]
     Market --> Creative["Creative Assessment"]

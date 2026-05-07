@@ -9,7 +9,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from agents import BaseAgent
-from agents.financial_model import FinancialModelingAgent
+from agents.financial_model import FinancialModelingAgent, normalize_financial_assumptions
 from agents.market_research import MarketResearchAgent
 from agents.master_agent import MasterOrchestratorAgent
 from fastapi.testclient import TestClient
@@ -84,6 +84,25 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
         metrics = agent._calculate_basic_metrics(0, "Drama", "theatrical")
         self.assertEqual(metrics["moderate_roi"], 0)
         self.assertIn("Budget not provided", metrics["budget_warning"])
+
+    def test_financial_assumptions_change_scenario_numbers(self):
+        agent = FinancialModelingAgent()
+        base = agent._calculate_basic_metrics(10_000_000, "Horror", "theatrical")
+        custom = agent._calculate_basic_metrics(
+            10_000_000,
+            "Horror",
+            "theatrical",
+            assumptions={
+                "marketing_spend": 20_000_000,
+                "base_revenue_multiplier": 4.0,
+                "risk_tolerance": "conservative",
+            },
+        )
+
+        self.assertNotEqual(base["moderate_roi"], custom["moderate_roi"])
+        self.assertEqual(custom["assumptions"]["marketing_spend"], 20_000_000)
+        self.assertEqual(custom["decision_thresholds"]["go_roi"], 60)
+        self.assertTrue(custom["sensitivity_table"])
 
     def test_market_research_fallback_comparable_rows(self):
         agent = MarketResearchAgent()
@@ -175,6 +194,7 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
                     "findings": "Finance findings",
                     "metadata": {
                         "basic_metrics": {"moderate_roi": 42},
+                        "assumptions": {"risk_tolerance": "balanced"},
                     },
                 },
                 "risk_analysis": {
@@ -200,6 +220,7 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
         self.assertEqual(payload["recommendation"], "CONDITIONAL GO")
         self.assertEqual(payload["comparable_evidence"][0]["title"], "Arrival")
         self.assertEqual(payload["financial_scenarios"]["moderate_roi"], 42)
+        self.assertEqual(payload["financial_assumptions"]["risk_tolerance"], "balanced")
         self.assertEqual(payload["risk_matrix"]["risk_level"], "Medium Risk")
         self.assertEqual(payload["run_ledger_path"], "outputs/runs/test_run.json")
 
@@ -245,7 +266,14 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
                             "conservative_revenue": 12_000_000,
                             "moderate_revenue": 20_000_000,
                             "optimistic_revenue": 30_000_000,
+                            "break_even_revenue": 20_000_000,
+                            "total_exposure": 15_000_000,
                         },
+                        "assumptions": normalize_financial_assumptions(
+                            {},
+                            budget=10_000_000,
+                            platform="theatrical",
+                        ),
                     },
                 },
                 "risk_analysis": {
@@ -266,6 +294,8 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
             "### Comparable Evidence",
             "| Title | Year | Budget | Revenue | ROI | Rating | Similar Signals |",
             "### Financial Scenario Snapshot",
+            "### Model Assumptions",
+            "### Break-even Analysis",
             "### Risk Matrix",
         ])
 
@@ -598,6 +628,26 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
         payload = response.json()
         self.assertIn("job_id", payload)
         self.assertEqual(JOBS[payload["job_id"]]["kind"], "batch")
+
+    def test_web_analyze_accepts_financial_assumptions(self):
+        client = TestClient(app)
+        response = client.post(
+            "/api/analyze",
+            json={
+                "description": "A compact thriller with controllable assumptions",
+                "budget": 5_000_000,
+                "genre": "Horror",
+                "platform": "theatrical",
+                "demo_mode": True,
+                "marketing_spend": 2_000_000,
+                "base_revenue_multiplier": 3.0,
+                "risk_tolerance": "aggressive",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertIn("job_id", payload)
 
     def test_web_events_stream_job_progress(self):
         client = TestClient(app)

@@ -96,6 +96,52 @@
             <div id="comparable-results" class="comparable-results"></div>
           </section>
 
+          <details class="assumptions-panel">
+            <summary>Financial assumptions</summary>
+            <div class="assumptions-grid">
+              <label class="field">
+                <span>Marketing / P&amp;A</span>
+                <input id="marketing-spend" type="number" min="0" step="500000" value="0" />
+              </label>
+              <label class="field">
+                <span>Distribution fee</span>
+                <input id="distribution-fee-pct" type="number" min="0" max="0.5" step="0.01" value="0.12" />
+              </label>
+              <label class="field">
+                <span>Theatrical share</span>
+                <input id="theatrical-revenue-share" type="number" min="0" max="1" step="0.01" value="0.5" />
+              </label>
+              <label class="field">
+                <span>Streaming/license value</span>
+                <input id="streaming-license-value" type="number" min="0" step="500000" value="0" />
+              </label>
+              <label class="field">
+                <span>Subscriber LTV</span>
+                <input id="subscriber-lifetime-value" type="number" min="1" step="10" value="120" />
+              </label>
+              <label class="field">
+                <span>Downside multiple</span>
+                <input id="downside-revenue-multiplier" type="number" min="0" step="0.1" value="0" />
+              </label>
+              <label class="field">
+                <span>Base multiple</span>
+                <input id="base-revenue-multiplier" type="number" min="0" step="0.1" value="0" />
+              </label>
+              <label class="field">
+                <span>Upside multiple</span>
+                <input id="upside-revenue-multiplier" type="number" min="0" step="0.1" value="0" />
+              </label>
+              <label class="field">
+                <span>Risk tolerance</span>
+                <select id="risk-tolerance">
+                  <option value="balanced">Balanced</option>
+                  <option value="conservative">Conservative</option>
+                  <option value="aggressive">Aggressive</option>
+                </select>
+              </label>
+            </div>
+          </details>
+
           <div class="actions">
             <button id="run-button" type="submit">Run Analysis</button>
             <button id="sample-button" type="button" class="secondary">Load Sample</button>

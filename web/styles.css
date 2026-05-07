@@ -168,7 +168,8 @@ textarea:focus {
   padding-top: 12px;
 }
 
-.private-dataset-panel summary {
+.private-dataset-panel summary,
+.assumptions-panel summary {
   color: var(--accent);
   cursor: pointer;
   font-weight: 800;
@@ -185,6 +186,20 @@ textarea:focus {
 .private-dataset-actions {
   display: flex;
   gap: 10px;
+}
+
+.assumptions-panel {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin-top: 18px;
+  padding: 14px;
+}
+
+.assumptions-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
 }
 
 .inline-status {
@@ -540,7 +555,8 @@ button:disabled {
   .workspace,
   .field-grid,
   .comparable-search-header,
-  .private-dataset-grid {
+  .private-dataset-grid,
+  .assumptions-grid {
     grid-template-columns: 1fr;
   }
 

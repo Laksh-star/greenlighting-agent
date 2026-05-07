@@ -62,6 +62,7 @@ The web UI supports:
 - comparable titles
 - TMDB comparable search and selection
 - private dataset save/search mode
+- financial assumption controls
 - demo-mode toggle
 - live agent progress stream
 - rendered report preview
@@ -104,6 +105,15 @@ title,year,genre,platform,budget,marketing_spend,revenue,rating,popularity,audie
 
 Saved private datasets are local files under `data/private/` and are ignored by git.
 
+Financial assumptions:
+
+1. Open **Financial assumptions** under the comparable search panel.
+2. Adjust P&A, distribution fee, theatrical share, streaming/license value, or scenario multiples.
+3. Choose a risk tolerance: `Balanced`, `Conservative`, or `Aggressive`.
+4. Run the analysis. The report includes model assumptions, sensitivity rows, and break-even analysis.
+
+Leave scenario multiples at `0` to use genre defaults. Enter explicit values when you want to test a studio finance case.
+
 Project comparison run:
 
 1. Scroll to **Project Comparison**.
@@ -131,7 +141,10 @@ python main.py \
   --genre "Science Fiction" \
   --platform hybrid \
   --comparables "Ex Machina,Moon,Arrival" \
-  --target-audience "adults 18-49, sci-fi thriller fans"
+  --target-audience "adults 18-49, sci-fi thriller fans" \
+  --marketing-spend 9000000 \
+  --base-revenue-multiplier 2.6 \
+  --risk-tolerance balanced
 ```
 
 Platform choices:
@@ -219,7 +232,10 @@ Each report includes:
 - executive summary
 - decision drivers
 - comparable evidence table
+- model assumptions
 - financial scenario snapshot
+- sensitivity table
+- break-even analysis
 - risk matrix
 - detailed synthesis
 - subagent notes
