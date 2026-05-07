@@ -148,6 +148,97 @@ textarea:focus {
   margin-top: 20px;
 }
 
+.comparable-search {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin-top: 18px;
+  padding: 14px;
+}
+
+.comparable-search-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.inline-status {
+  font-size: 13px;
+  margin: 10px 0;
+}
+
+.selected-comparables {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.selected-chip {
+  background: var(--ink-soft);
+  border-color: var(--accent);
+  color: var(--accent-strong);
+  font-size: 13px;
+  min-height: 30px;
+  padding: 0 10px;
+}
+
+.comparable-results {
+  display: grid;
+  gap: 10px;
+  max-height: 360px;
+  overflow: auto;
+}
+
+.comparable-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 12px;
+  padding: 10px;
+}
+
+.comparable-card img,
+.poster-placeholder {
+  aspect-ratio: 2 / 3;
+  border-radius: 6px;
+  height: 114px;
+  object-fit: cover;
+  width: 76px;
+}
+
+.poster-placeholder {
+  align-items: center;
+  background: var(--ink-soft);
+  color: var(--muted);
+  display: flex;
+  font-size: 12px;
+  justify-content: center;
+  text-align: center;
+}
+
+.comparable-card h3 {
+  font-size: 15px;
+  margin: 0 0 4px;
+}
+
+.comparable-card p {
+  font-size: 13px;
+  margin: 3px 0;
+}
+
+.select-comparable {
+  font-size: 13px;
+  margin-top: 8px;
+  min-height: 32px;
+  padding: 0 12px;
+}
+
+.select-comparable.selected {
+  background: var(--accent-strong);
+}
+
 button,
 .download-actions a {
   border: 1px solid var(--accent);
@@ -422,7 +513,8 @@ button:disabled {
   }
 
   .workspace,
-  .field-grid {
+  .field-grid,
+  .comparable-search-header {
     grid-template-columns: 1fr;
   }
 

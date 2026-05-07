@@ -22,6 +22,7 @@ AI-assisted greenlight analysis for film and TV projects. The app combines compa
 - **Six analysis agents:** Market research, audience intelligence, financial modeling, competitive analysis, creative assessment, and risk analysis.
 - **Master synthesis:** Produces a final recommendation, confidence score, executive summary, and decision drivers.
 - **TMDB enrichment:** Uses TMDB to enrich supplied comparable titles when `TMDB_API_KEY` is configured.
+- **Comparable search:** Search/select TMDB titles from the browser and auto-fill the analysis comparables.
 - **No-key demo mode:** Generates deterministic sample reports without Anthropic or TMDB credentials.
 - **Report quality controls:** Blocks incomplete reports before save and warns when comparables fall back to input-only data.
 - **Audit artifacts:** Writes Markdown, structured JSON, run ledgers, token usage, estimated Anthropic cost, and batch summaries.

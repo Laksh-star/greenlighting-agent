@@ -493,6 +493,49 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
         payload = response.json()
         self.assertIn("description,budget,genre,platform", payload["csv_text"])
 
+    def test_web_comparable_search_with_mocked_tmdb(self):
+        client = TestClient(app)
+        with patch("web_app.tmdb_client.search_movie") as search_movie, patch(
+            "web_app.tmdb_client.get_movie_details"
+        ) as get_movie_details:
+            search_movie.return_value = [{
+                "id": 1,
+                "title": "Arrival",
+                "release_date": "2016-11-11",
+                "vote_average": 7.6,
+                "popularity": 51.6,
+            }]
+            get_movie_details.return_value = {
+                "id": 1,
+                "title": "Arrival",
+                "release_date": "2016-11-11",
+                "vote_average": 7.6,
+                "popularity": 51.6,
+                "budget": 47_000_000,
+                "revenue": 203_400_000,
+                "poster_path": "/poster.jpg",
+            }
+
+            response = client.get("/api/comparables/search?q=Arrival")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["source"], "tmdb")
+        self.assertEqual(payload["results"][0]["title"], "Arrival")
+        self.assertEqual(payload["results"][0]["budget"], 47_000_000)
+        self.assertIn("image.tmdb.org", payload["results"][0]["poster_url"])
+
+    def test_web_comparable_search_falls_back_without_tmdb(self):
+        client = TestClient(app)
+        with patch("web_app.tmdb_client.search_movie", side_effect=Exception("no key")):
+            response = client.get("/api/comparables/search?q=Moon")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["source"], "demo fallback")
+        self.assertEqual(payload["results"][0]["title"], "Moon")
+        self.assertIn("TMDB search unavailable", payload["warning"])
+
     def test_web_batch_analyze_starts_job(self):
         client = TestClient(app)
         response = client.post(

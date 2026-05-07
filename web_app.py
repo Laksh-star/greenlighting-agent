@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 
 from config import OUTPUT_DIR
 from main import GreenlightingCLI, parse_comparables
+from tools.tmdb_tools import tmdb_client
 from utils.batch import build_batch_summary_row, load_batch_projects_from_text, save_batch_summary
 from utils.sample_data import SAMPLE_PROJECT
 
@@ -25,6 +26,70 @@ app = FastAPI(title="Greenlighting Agent Demo")
 app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
 
 JOBS: Dict[str, Dict[str, Any]] = {}
+
+TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w185"
+FALLBACK_COMPARABLES = [
+    {
+        "id": "fallback-ex-machina",
+        "title": "Ex Machina",
+        "year": "2015",
+        "rating": 7.6,
+        "popularity": 41.2,
+        "budget": 15_000_000,
+        "revenue": 36_900_000,
+        "poster_url": "",
+        "overview": "Contained sci-fi thriller with AI themes and premium positioning.",
+        "source": "demo fallback",
+    },
+    {
+        "id": "fallback-moon",
+        "title": "Moon",
+        "year": "2009",
+        "rating": 7.6,
+        "popularity": 24.4,
+        "budget": 5_000_000,
+        "revenue": 9_800_000,
+        "poster_url": "",
+        "overview": "Contained lunar sci-fi drama with a modest production profile.",
+        "source": "demo fallback",
+    },
+    {
+        "id": "fallback-arrival",
+        "title": "Arrival",
+        "year": "2016",
+        "rating": 7.6,
+        "popularity": 51.6,
+        "budget": 47_000_000,
+        "revenue": 203_400_000,
+        "poster_url": "",
+        "overview": "Adult-skewing original sci-fi with strong critical and commercial upside.",
+        "source": "demo fallback",
+    },
+    {
+        "id": "fallback-paranormal-activity",
+        "title": "Paranormal Activity",
+        "year": "2007",
+        "rating": 6.0,
+        "popularity": 35.0,
+        "budget": 15_000,
+        "revenue": 193_000_000,
+        "poster_url": "",
+        "overview": "Micro-budget found footage horror with breakout theatrical ROI.",
+        "source": "demo fallback",
+    },
+    {
+        "id": "fallback-host",
+        "title": "Host",
+        "year": "2020",
+        "rating": 6.5,
+        "popularity": 18.0,
+        "budget": 0,
+        "revenue": 0,
+        "poster_url": "",
+        "overview": "Lean screenlife horror with a clear contained execution model.",
+        "source": "demo fallback",
+    },
+]
 
 
 class AnalysisRequest(BaseModel):
@@ -68,6 +133,33 @@ async def sample_batch():
         "Horror,theatrical,\"Paranormal Activity,Host\",\"horror fans 18-34\"\n"
     )
     return {"csv_text": sample_csv}
+
+
+@app.get("/api/comparables/search")
+async def search_comparables(q: str = Query(..., min_length=2), limit: int = Query(6, ge=1, le=10)):
+    """Search TMDB for comparable title candidates."""
+    try:
+        matches = tmdb_client.search_movie(q)[:limit]
+        results = []
+        for match in matches:
+            details = {}
+            movie_id = match.get("id")
+            if movie_id:
+                try:
+                    details = tmdb_client.get_movie_details(movie_id)
+                except Exception:
+                    details = {}
+            results.append(_format_comparable_search_result(match, details))
+        if results:
+            return {"results": results, "source": "tmdb"}
+    except Exception as exc:
+        return {
+            "results": _fallback_comparable_search(q, limit),
+            "source": "demo fallback",
+            "warning": f"TMDB search unavailable: {exc}",
+        }
+
+    return {"results": _fallback_comparable_search(q, limit), "source": "demo fallback"}
 
 
 @app.post("/api/analyze")
@@ -308,6 +400,33 @@ def _make_batch_progress_callback(job_id: str, project_index: int, project_total
         )
 
     return progress_callback
+
+
+def _format_comparable_search_result(match: Dict[str, Any], details: Dict[str, Any]) -> Dict[str, Any]:
+    poster_path = details.get("poster_path") or match.get("poster_path") or ""
+    release_date = details.get("release_date") or match.get("release_date") or ""
+    return {
+        "id": match.get("id"),
+        "title": details.get("title") or match.get("title") or "Untitled",
+        "year": release_date[:4] or "n/a",
+        "rating": details.get("vote_average", match.get("vote_average", 0)) or 0,
+        "popularity": details.get("popularity", match.get("popularity", 0)) or 0,
+        "budget": details.get("budget", 0) or 0,
+        "revenue": details.get("revenue", 0) or 0,
+        "poster_url": f"{TMDB_IMAGE_BASE_URL}{poster_path}" if poster_path else "",
+        "overview": details.get("overview") or match.get("overview") or "",
+        "source": "tmdb",
+    }
+
+
+def _fallback_comparable_search(query: str, limit: int) -> list:
+    normalized = query.lower().strip()
+    matches = [
+        item
+        for item in FALLBACK_COMPARABLES
+        if normalized in item["title"].lower() or normalized in item["overview"].lower()
+    ]
+    return (matches or FALLBACK_COMPARABLES)[:limit]
 
 
 def _append_event(

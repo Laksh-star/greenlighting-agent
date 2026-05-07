@@ -54,6 +54,19 @@
             <input id="comparables" name="comparables" type="text" />
           </label>
 
+          <section class="comparable-search" aria-label="Comparable search">
+            <div class="comparable-search-header">
+              <label class="field">
+                <span>Search comparable titles</span>
+                <input id="comparable-query" type="search" placeholder="Search TMDB, e.g. Arrival" />
+              </label>
+              <button id="search-comparables" type="button" class="secondary">Search</button>
+            </div>
+            <p id="comparable-search-status" class="inline-status">Select titles to add them to comparables.</p>
+            <div id="selected-comparables" class="selected-comparables"></div>
+            <div id="comparable-results" class="comparable-results"></div>
+          </section>
+
           <div class="actions">
             <button id="run-button" type="submit">Run Analysis</button>
             <button id="sample-button" type="button" class="secondary">Load Sample</button>

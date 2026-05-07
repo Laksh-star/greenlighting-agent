@@ -60,6 +60,7 @@ The web UI supports:
 - platform
 - target audience
 - comparable titles
+- TMDB comparable search and selection
 - demo-mode toggle
 - live agent progress stream
 - rendered report preview
@@ -75,6 +76,15 @@ Recommended first run:
 4. Wait for the progress panel to show **Completed**.
 5. Review the report preview.
 6. Download Markdown or JSON if needed.
+
+Comparable search:
+
+1. Use **Search comparable titles** to search TMDB from the browser.
+2. Click **Add** on 2-5 useful titles.
+3. The selected titles automatically populate the `Comparables` field.
+4. Run the analysis with those selected comparables.
+
+If TMDB is unavailable, the UI returns demo fallback comparables so the workflow is still testable.
 
 Project comparison run:
 

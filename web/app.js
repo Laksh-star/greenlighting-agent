@@ -18,12 +18,18 @@ const batchDownloads = document.querySelector("#batch-downloads");
 const batchCsvDownload = document.querySelector("#batch-csv-download");
 const batchJsonDownload = document.querySelector("#batch-json-download");
 const comparisonTable = document.querySelector("#comparison-table");
+const comparableQuery = document.querySelector("#comparable-query");
+const searchComparables = document.querySelector("#search-comparables");
+const comparableSearchStatus = document.querySelector("#comparable-search-status");
+const selectedComparables = document.querySelector("#selected-comparables");
+const comparableResults = document.querySelector("#comparable-results");
 
 let currentJobId = "";
 let currentBatchJobId = "";
 let eventSource = null;
 let batchEventSource = null;
 let completedAgents = new Set();
+let selectedComparableTitles = [];
 
 const agentLabels = {
   market_research: "Market research",
@@ -45,6 +51,8 @@ sampleButton.addEventListener("click", async () => {
   setValue("platform", sample.platform);
   setValue("target-audience", sample.target_audience);
   setValue("comparables", sample.comparables);
+  selectedComparableTitles = parseComparableInput(sample.comparables);
+  renderSelectedComparables();
   document.querySelector("#demo-mode").checked = true;
 });
 
@@ -52,6 +60,17 @@ loadBatchSample.addEventListener("click", async () => {
   const response = await fetch("/api/sample-batch");
   const sample = await response.json();
   batchCsv.value = sample.csv_text;
+});
+
+searchComparables.addEventListener("click", async () => {
+  await runComparableSearch();
+});
+
+comparableQuery.addEventListener("keydown", async (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    await runComparableSearch();
+  }
 });
 
 form.addEventListener("submit", async (event) => {
@@ -276,6 +295,98 @@ function renderComparisonTable(rows) {
   `;
 }
 
+async function runComparableSearch() {
+  const query = comparableQuery.value.trim();
+  if (query.length < 2) {
+    comparableSearchStatus.textContent = "Enter at least 2 characters.";
+    return;
+  }
+  searchComparables.disabled = true;
+  comparableSearchStatus.textContent = "Searching comparables";
+  comparableResults.innerHTML = "";
+
+  try {
+    const response = await fetch(`/api/comparables/search?q=${encodeURIComponent(query)}`);
+    if (!response.ok) {
+      throw new Error(await response.text());
+    }
+    const payload = await response.json();
+    comparableSearchStatus.textContent = payload.warning || `${payload.results.length} results from ${payload.source}`;
+    comparableResults.innerHTML = renderComparableCards(payload.results);
+  } catch (error) {
+    comparableSearchStatus.textContent = "Comparable search failed";
+    comparableResults.innerHTML = `<p class="placeholder">${escapeHtml(error.message)}</p>`;
+  } finally {
+    searchComparables.disabled = false;
+  }
+}
+
+function renderComparableCards(results) {
+  if (!results.length) {
+    return `<p class="placeholder">No comparable titles found.</p>`;
+  }
+  return results.map((item) => {
+    const selected = selectedComparableTitles.includes(item.title);
+    return `
+      <article class="comparable-card">
+        ${item.poster_url ? `<img src="${escapeHtml(item.poster_url)}" alt="${escapeHtml(item.title)} poster">` : `<div class="poster-placeholder">No poster</div>`}
+        <div>
+          <h3>${escapeHtml(item.title)}</h3>
+          <p>${escapeHtml(item.year)} · Rating ${formatNumber(item.rating)} · Popularity ${formatNumber(item.popularity)}</p>
+          <p>${formatMoney(item.budget)} budget · ${formatMoney(item.revenue)} revenue</p>
+          <p>${escapeHtml(truncate(item.overview || item.source || "", 120))}</p>
+          <button type="button" class="select-comparable ${selected ? "selected" : ""}" data-title="${escapeHtml(item.title)}">${selected ? "Selected" : "Add"}</button>
+        </div>
+      </article>
+    `;
+  }).join("");
+}
+
+comparableResults.addEventListener("click", (event) => {
+  const button = event.target.closest(".select-comparable");
+  if (!button) {
+    return;
+  }
+  const title = button.dataset.title;
+  if (!title) {
+    return;
+  }
+  if (selectedComparableTitles.includes(title)) {
+    selectedComparableTitles = selectedComparableTitles.filter((item) => item !== title);
+  } else if (selectedComparableTitles.length < 5) {
+    selectedComparableTitles.push(title);
+  } else {
+    comparableSearchStatus.textContent = "Use up to 5 comparables for a focused analysis.";
+  }
+  syncComparablesInput();
+  renderSelectedComparables();
+  button.textContent = selectedComparableTitles.includes(title) ? "Selected" : "Add";
+  button.classList.toggle("selected", selectedComparableTitles.includes(title));
+});
+
+function syncComparablesInput() {
+  setValue("comparables", selectedComparableTitles.join(", "));
+}
+
+function renderSelectedComparables() {
+  selectedComparables.innerHTML = selectedComparableTitles.map((title) => `
+    <button type="button" class="selected-chip" data-title="${escapeHtml(title)}">${escapeHtml(title)} ×</button>
+  `).join("");
+}
+
+selectedComparables.addEventListener("click", (event) => {
+  const chip = event.target.closest(".selected-chip");
+  if (!chip) {
+    return;
+  }
+  selectedComparableTitles = selectedComparableTitles.filter((title) => title !== chip.dataset.title);
+  syncComparablesInput();
+  renderSelectedComparables();
+  if (comparableResults.innerHTML) {
+    runComparableSearch();
+  }
+});
+
 function addEvent(title, detail) {
   const item = document.createElement("li");
   item.innerHTML = `<strong>${escapeHtml(title)}</strong><span>${escapeHtml(detail)}</span>`;
@@ -422,6 +533,35 @@ function value(id) {
 
 function setValue(id, nextValue) {
   document.querySelector(`#${id}`).value = nextValue || "";
+}
+
+function parseComparableInput(text) {
+  return text.split(",").map((item) => item.trim()).filter(Boolean);
+}
+
+function formatMoney(amount) {
+  const number = Number(amount) || 0;
+  if (!number) {
+    return "n/a";
+  }
+  if (number >= 1000000000) {
+    return `$${(number / 1000000000).toFixed(1)}B`;
+  }
+  if (number >= 1000000) {
+    return `$${(number / 1000000).toFixed(1)}M`;
+  }
+  return `$${number.toLocaleString()}`;
+}
+
+function formatNumber(valueToFormat) {
+  return (Number(valueToFormat) || 0).toFixed(1);
+}
+
+function truncate(text, maxLength) {
+  if (text.length <= maxLength) {
+    return text;
+  }
+  return `${text.slice(0, maxLength - 3)}...`;
 }
 
 sampleButton.click();
