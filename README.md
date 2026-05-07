@@ -24,6 +24,7 @@ AI-assisted greenlight analysis for film and TV projects. The app combines compa
 - **TMDB enrichment:** Uses TMDB to enrich supplied comparable titles when `TMDB_API_KEY` is configured.
 - **Comparable search:** Search/select TMDB titles from the browser and auto-fill the analysis comparables.
 - **Private dataset mode:** Save local studio datasets and run comparable search/analysis with private comps, TMDB, or both.
+- **Script/treatment input:** Upload or pass text/Markdown source material so creative assessment can evaluate more than a logline.
 - **Assumption controls:** Tune P&A, distribution fee, revenue share, streamer value, scenario multiples, and risk tolerance.
 - **No-key demo mode:** Generates deterministic sample reports without Anthropic or TMDB credentials.
 - **Report quality controls:** Blocks incomplete reports before save and warns when comparables fall back to input-only data.
@@ -80,6 +81,7 @@ python main.py \
   --platform hybrid \
   --comparables "Ex Machina,Moon,Arrival" \
   --target-audience "adults 18-49, sci-fi thriller fans" \
+  --source-file treatment.md \
   --marketing-spend 9000000 \
   --base-revenue-multiplier 2.6 \
   --risk-tolerance balanced
@@ -126,7 +128,7 @@ flowchart LR
 
 Execution shape:
 
-1. The CLI or web UI collects project description, budget, genre, platform, comparables, and audience.
+1. The CLI or web UI collects project description, optional source material, budget, genre, platform, comparables, and audience.
 2. Market research runs first so downstream agents can use comparable evidence.
 3. Remaining agents run in parallel.
 4. The master orchestrator synthesizes a recommendation.

@@ -36,6 +36,12 @@ def build_analysis_payload(
         "schema_version": "1.0",
         "generated_at": datetime.utcnow().isoformat(),
         "project": results.get("requested_project_data", results.get("project_data", {})),
+        "source_material": _source_material_summary(
+            results.get("requested_project_data", results.get("project_data", {})).get(
+                "source_material",
+                {},
+            )
+        ),
         "recommendation": final.get("recommendation"),
         "confidence": final.get("confidence"),
         "summary": final.get("summary"),
@@ -70,6 +76,18 @@ def build_analysis_payload(
         "subagent_results": subagents,
         "markdown_report_path": str(markdown_report_path),
         "run_ledger_path": str(run_ledger_path) if run_ledger_path else "",
+}
+
+
+def _source_material_summary(source_material: Dict[str, Any]) -> Dict[str, Any]:
+    if not source_material:
+        return {}
+    return {
+        "name": source_material.get("name", ""),
+        "word_count": source_material.get("word_count", 0),
+        "character_count": source_material.get("character_count", 0),
+        "line_count": source_material.get("line_count", 0),
+        "excerpt": source_material.get("excerpt", ""),
     }
 
 

@@ -26,6 +26,22 @@
             <textarea id="description" name="description" rows="7" required></textarea>
           </label>
 
+          <details class="source-material-panel">
+            <summary>Script / treatment</summary>
+            <div class="source-material-grid">
+              <label class="field">
+                <span>Upload text or Markdown</span>
+                <input id="source-material-file" type="file" accept=".txt,.md,.markdown,text/plain,text/markdown" />
+              </label>
+              <label class="field">
+                <span>Material name</span>
+                <input id="source-material-name" type="text" />
+              </label>
+            </div>
+            <textarea id="source-material-text" class="batch-input" rows="6"></textarea>
+            <p id="source-material-status" class="inline-status">Optional source material is included in creative assessment.</p>
+          </details>
+
           <div class="field-grid">
             <label class="field">
               <span>Budget</span>

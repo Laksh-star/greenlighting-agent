@@ -25,14 +25,24 @@ class CreativeAssessmentAgent(BaseAgent):
         description = project_data.get("description", "")
         genre = project_data.get("genre", "Unknown")
         budget = project_data.get("budget", 0)
+        source_material = project_data.get("source_material", {})
+        source_excerpt = source_material.get("excerpt", "")
 
         if project_data.get("demo_mode"):
-            findings = (
-                "The creative hook is strong because it combines a contained location, "
-                "AI paranoia, and a mystery engine that can be sold quickly. The main "
-                "creative risk is familiarity: the script needs a human emotional spine "
-                "and a specific visual world to avoid feeling like generic AI anxiety."
-            )
+            if source_excerpt:
+                findings = (
+                    "The provided source material gives the creative assessment more "
+                    "specificity than a logline alone. The opening signal is usable for "
+                    "tone, concept clarity, and execution-risk review, but the project "
+                    "still needs a focused human spine and clear visual grammar."
+                )
+            else:
+                findings = (
+                    "The creative hook is strong because it combines a contained location, "
+                    "AI paranoia, and a mystery engine that can be sold quickly. The main "
+                    "creative risk is familiarity: the script needs a human emotional spine "
+                    "and a specific visual world to avoid feeling like generic AI anxiety."
+                )
             confidence = 0.8
         else:
             user_message = f"""
@@ -41,6 +51,10 @@ Assess the creative package for this project:
 **Project Description:** {description}
 **Genre:** {genre}
 **Budget:** ${budget:,}
+**Source Material:** {source_material.get('name', 'not provided')}
+
+**Source Material Excerpt:**
+{source_excerpt or 'No source material provided.'}
 
 Cover:
 1. Concept clarity
@@ -66,5 +80,7 @@ Cover:
                 "genre": genre,
                 "budget": budget,
                 "execution_complexity": "moderate" if budget < 50_000_000 else "high",
+                "source_material_name": source_material.get("name", ""),
+                "source_material_word_count": source_material.get("word_count", 0),
             },
         )

@@ -55,6 +55,7 @@ http://127.0.0.1:8000
 The web UI supports:
 
 - project description
+- optional script/treatment text or Markdown upload
 - budget
 - genre
 - platform
@@ -78,6 +79,14 @@ Recommended first run:
 4. Wait for the progress panel to show **Completed**.
 5. Review the report preview.
 6. Download Markdown or JSON if needed.
+
+Script/treatment input:
+
+1. Open **Script / treatment** under the project description.
+2. Upload a `.txt` or `.md` file, or paste treatment/script text directly.
+3. Run the analysis. The creative assessment receives the source-material excerpt, and the report includes a source-material snapshot.
+
+Full source text is used during the run. Saved JSON and run ledgers keep only the source name, excerpt, and counts.
 
 Comparable search:
 
@@ -142,6 +151,7 @@ python main.py \
   --platform hybrid \
   --comparables "Ex Machina,Moon,Arrival" \
   --target-audience "adults 18-49, sci-fi thriller fans" \
+  --source-file treatment.md \
   --marketing-spend 9000000 \
   --base-revenue-multiplier 2.6 \
   --risk-tolerance balanced
@@ -231,6 +241,7 @@ Each report includes:
 - confidence level
 - executive summary
 - decision drivers
+- source material snapshot, when supplied
 - comparable evidence table
 - model assumptions
 - financial scenario snapshot

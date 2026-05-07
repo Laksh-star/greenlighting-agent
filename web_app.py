@@ -18,6 +18,7 @@ from tools.tmdb_tools import tmdb_client
 from tools.private_dataset import PRIVATE_DATASET_SAMPLE, private_dataset_store
 from utils.batch import build_batch_summary_row, load_batch_projects_from_text, save_batch_summary
 from utils.sample_data import SAMPLE_PROJECT
+from utils.source_material import build_source_material_payload
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -112,6 +113,8 @@ class AnalysisRequest(BaseModel):
     base_revenue_multiplier: float = Field(0, ge=0)
     upside_revenue_multiplier: float = Field(0, ge=0)
     risk_tolerance: str = Field("balanced", pattern="^(conservative|balanced|aggressive)$")
+    source_material_name: str = ""
+    source_material_text: str = ""
 
 
 class BatchAnalysisRequest(BaseModel):
@@ -338,6 +341,12 @@ async def _run_analysis(job_id: str, request: AnalysisRequest):
 
     try:
         comparable_titles = parse_comparables(request.comparables)
+        source_material = None
+        if request.source_material_text.strip():
+            source_material = build_source_material_payload(
+                request.source_material_text,
+                name=request.source_material_name or "uploaded source material",
+            )
         comparable_evidence, market_data_warning = _build_private_comparable_evidence(
             comparable_titles,
             request.comparable_source,
@@ -366,6 +375,7 @@ async def _run_analysis(job_id: str, request: AnalysisRequest):
                 "upside_revenue_multiplier": request.upside_revenue_multiplier,
                 "risk_tolerance": request.risk_tolerance,
             },
+            source_material=source_material,
         )
         JOBS[job_id]["result"] = result
         JOBS[job_id]["status"] = "completed"

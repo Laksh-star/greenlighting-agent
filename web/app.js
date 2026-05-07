@@ -30,6 +30,10 @@ const privateDatasetCsv = document.querySelector("#private-dataset-csv");
 const loadPrivateSample = document.querySelector("#load-private-sample");
 const savePrivateDataset = document.querySelector("#save-private-dataset");
 const privateDatasetStatus = document.querySelector("#private-dataset-status");
+const sourceMaterialFile = document.querySelector("#source-material-file");
+const sourceMaterialName = document.querySelector("#source-material-name");
+const sourceMaterialText = document.querySelector("#source-material-text");
+const sourceMaterialStatus = document.querySelector("#source-material-status");
 const assumptionInputs = {
   marketingSpend: document.querySelector("#marketing-spend"),
   distributionFeePct: document.querySelector("#distribution-fee-pct"),
@@ -95,6 +99,21 @@ savePrivateDataset.addEventListener("click", async () => {
   await saveCurrentPrivateDataset();
 });
 
+sourceMaterialFile.addEventListener("change", async () => {
+  const file = sourceMaterialFile.files[0];
+  if (!file) {
+    return;
+  }
+  sourceMaterialName.value = file.name;
+  sourceMaterialStatus.textContent = "Reading source material";
+  try {
+    sourceMaterialText.value = await file.text();
+    sourceMaterialStatus.textContent = `${file.name} loaded (${sourceMaterialText.value.length.toLocaleString()} characters).`;
+  } catch (error) {
+    sourceMaterialStatus.textContent = `File read failed: ${error.message}`;
+  }
+});
+
 comparableQuery.addEventListener("keydown", async (event) => {
   if (event.key === "Enter") {
     event.preventDefault();
@@ -126,7 +145,9 @@ form.addEventListener("submit", async (event) => {
     downside_revenue_multiplier: numberValue(assumptionInputs.downsideRevenueMultiplier),
     base_revenue_multiplier: numberValue(assumptionInputs.baseRevenueMultiplier),
     upside_revenue_multiplier: numberValue(assumptionInputs.upsideRevenueMultiplier),
-    risk_tolerance: assumptionInputs.riskTolerance.value
+    risk_tolerance: assumptionInputs.riskTolerance.value,
+    source_material_name: sourceMaterialName.value.trim(),
+    source_material_text: sourceMaterialText.value.trim()
   };
 
   try {

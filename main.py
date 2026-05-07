@@ -28,6 +28,7 @@ from utils.batch import (
 )
 from utils.report_quality import assert_report_quality
 from utils.run_ledger import save_run_ledger
+from utils.source_material import load_source_material
 
 
 class GreenlightingCLI:
@@ -51,6 +52,7 @@ class GreenlightingCLI:
         comparable_source: str = "tmdb",
         private_dataset_id: str = "",
         financial_assumptions: Dict[str, Any] = None,
+        source_material: Dict[str, Any] = None,
     ) -> Dict[str, Any]:
         """
         Run full greenlighting analysis.
@@ -79,11 +81,13 @@ class GreenlightingCLI:
             'private_dataset_id': private_dataset_id,
             'financial_assumptions': financial_assumptions or {},
         }
+        if source_material:
+            project_data["source_material"] = source_material
         if comparable_evidence is not None:
             project_data["comparable_evidence"] = comparable_evidence
         if market_data_warning:
             project_data["market_data_warning"] = market_data_warning
-        requested_project_data = dict(project_data)
+        requested_project_data = self._public_project_data(project_data)
         
         tmdb_client.reset_usage_metrics()
 
@@ -180,6 +184,10 @@ class GreenlightingCLI:
         
         if project_data.get('comparables'):
             lines.append(f"**Comparable Titles:** {', '.join(project_data['comparables'])}")
+
+        source_material = project_data.get("source_material", {})
+        if source_material:
+            lines.append(f"**Source Material:** {source_material.get('name', 'provided')}")
         
         lines.append("")
         lines.append("---")
@@ -199,6 +207,12 @@ class GreenlightingCLI:
         decision_drivers = final_rec.get("decision_drivers", [])
         if decision_drivers:
             lines.append("### Decision Drivers")
+            lines.append("")
+
+        if source_material:
+            lines.append("### Source Material Snapshot")
+            lines.append("")
+            lines.extend(self._format_source_material_snapshot(source_material))
             lines.append("")
             for driver in decision_drivers[:3]:
                 lines.append(f"- {driver}")
@@ -288,6 +302,19 @@ class GreenlightingCLI:
     def _get_agent_metadata(self, results: Dict[str, Any], agent_name: str) -> Dict[str, Any]:
         result = results.get("subagent_results", {}).get(agent_name, {})
         return result.get("metadata", {}) if isinstance(result, dict) else {}
+
+    def _public_project_data(self, project_data: Dict[str, Any]) -> Dict[str, Any]:
+        public_data = dict(project_data)
+        source_material = public_data.get("source_material")
+        if source_material:
+            public_data["source_material"] = {
+                "name": source_material.get("name", ""),
+                "excerpt": source_material.get("excerpt", ""),
+                "word_count": source_material.get("word_count", 0),
+                "character_count": source_material.get("character_count", 0),
+                "line_count": source_material.get("line_count", 0),
+            }
+        return public_data
 
     def _get_comparable_evidence(self, results: Dict[str, Any]) -> list:
         return self._get_agent_metadata(results, "market_research").get("comparable_evidence", [])
@@ -394,6 +421,16 @@ class GreenlightingCLI:
         if not rows:
             rows.append("- Break-even calculation unavailable.")
         return rows
+
+    def _format_source_material_snapshot(self, source_material: Dict[str, Any]) -> list:
+        excerpt = source_material.get("excerpt", "")
+        first_line = next((line.strip() for line in excerpt.splitlines() if line.strip()), "")
+        return [
+            f"- **File/name:** {source_material.get('name', 'source material')}",
+            f"- **Words:** {source_material.get('word_count', 0):,}",
+            f"- **Characters:** {source_material.get('character_count', 0):,}",
+            f"- **Opening signal:** {first_line[:240] or 'n/a'}",
+        ]
 
     def _format_risk_matrix(self, metadata: Dict[str, Any]) -> list:
         lines = [
@@ -604,6 +641,13 @@ async def main():
         help='Target demographic or audience segment'
     )
 
+    parser.add_argument(
+        '--source-file',
+        type=str,
+        default='',
+        help='Plain text or Markdown treatment/script file to include in analysis'
+    )
+
     parser.add_argument('--marketing-spend', type=int, default=0, help='Marketing/P&A spend in dollars')
     parser.add_argument('--distribution-fee-pct', type=float, default=0.12, help='Distribution fee as decimal, e.g. 0.12')
     parser.add_argument('--theatrical-revenue-share', type=float, default=0.5, help='Theatrical revenue share as decimal')
@@ -664,6 +708,7 @@ async def main():
                 "upside_revenue_multiplier": args.upside_revenue_multiplier,
                 "risk_tolerance": args.risk_tolerance,
             },
+            source_material=load_source_material(Path(args.source_file)) if args.source_file else None,
         )
 
 

@@ -20,6 +20,7 @@ from utils.analysis_report import build_analysis_payload
 from utils.batch import build_batch_summary_row, load_batch_projects, load_batch_projects_from_text
 from utils.report_quality import validate_report_quality
 from utils.run_ledger import build_run_ledger, summarize_model_usage
+from utils.source_material import build_source_material_payload
 from web_app import JOBS, app
 
 
@@ -167,6 +168,38 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
         self.assertIn("TMDB enrichment unavailable", report)
         self.assertIn("| Arrival | n/a | $0 | $0 | 0% | 0.0 | input only |", report)
 
+    def test_report_renders_source_material_snapshot(self):
+        cli = GreenlightingCLI()
+        source = build_source_material_payload(
+            "INT. STATION - NIGHT\nA miner hears a voice in the walls.",
+            name="treatment.md",
+        )
+        results = {
+            "project_data": {
+                "description": "Test project",
+                "budget": 0,
+                "genre": "Drama",
+                "platform": "streaming",
+                "target_audience": "general",
+                "comparables": [],
+                "source_material": source,
+            },
+            "final_recommendation": {
+                "recommendation": "CONDITIONAL GO",
+                "confidence": 0.8,
+                "summary": "Test summary",
+                "analysis": "Recommendation: CONDITIONAL GO",
+                "decision_drivers": ["Test driver"],
+            },
+            "subagent_results": {},
+        }
+
+        report = cli._format_report(results)
+
+        self.assertIn("### Source Material Snapshot", report)
+        self.assertIn("treatment.md", report)
+        self.assertIn("INT. STATION", report)
+
     def test_structured_analysis_payload_has_core_fields(self):
         results = {
             "requested_project_data": {"description": "Test project"},
@@ -223,6 +256,16 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
         self.assertEqual(payload["financial_assumptions"]["risk_tolerance"], "balanced")
         self.assertEqual(payload["risk_matrix"]["risk_level"], "Medium Risk")
         self.assertEqual(payload["run_ledger_path"], "outputs/runs/test_run.json")
+
+    def test_source_material_payload_summarizes_text(self):
+        payload = build_source_material_payload(
+            "Scene one.\n\nScene two has more detail.",
+            name="sample.txt",
+        )
+
+        self.assertEqual(payload["name"], "sample.txt")
+        self.assertEqual(payload["word_count"], 7)
+        self.assertIn("Scene one", payload["excerpt"])
 
     def _quality_results(self, recommendation="CONDITIONAL GO", analysis=None):
         return {
@@ -642,6 +685,25 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
                 "marketing_spend": 2_000_000,
                 "base_revenue_multiplier": 3.0,
                 "risk_tolerance": "aggressive",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertIn("job_id", payload)
+
+    def test_web_analyze_accepts_source_material(self):
+        client = TestClient(app)
+        response = client.post(
+            "/api/analyze",
+            json={
+                "description": "A chamber drama based on a short treatment",
+                "budget": 1_000_000,
+                "genre": "Drama",
+                "platform": "streaming",
+                "demo_mode": True,
+                "source_material_name": "short-treatment.md",
+                "source_material_text": "A protagonist returns home and finds a hidden archive.",
             },
         )
 
