@@ -19,6 +19,7 @@ from tools.private_dataset import PrivateDatasetStore, PRIVATE_DATASET_SAMPLE, p
 from utils.analysis_report import build_analysis_payload
 from utils.batch import build_batch_summary_row, load_batch_projects, load_batch_projects_from_text
 from utils.report_quality import validate_report_quality
+from utils.report_library import list_report_summaries, load_report_detail
 from utils.run_ledger import build_run_ledger, summarize_model_usage
 from utils.source_material import build_source_material_payload
 from web_app import JOBS, app
@@ -266,6 +267,33 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
         self.assertEqual(payload["name"], "sample.txt")
         self.assertEqual(payload["word_count"], 7)
         self.assertIn("Scene one", payload["excerpt"])
+
+    def test_report_library_lists_and_loads_reports(self):
+        report_dir = Path("outputs/test_report_library")
+        report_dir.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "generated_at": "2026-05-07T10:00:00",
+            "project": {
+                "description": "A contained thriller with a long project description",
+                "genre": "Thriller",
+                "platform": "hybrid",
+            },
+            "recommendation": "CONDITIONAL GO",
+            "confidence": 0.84,
+            "financial_scenarios": {"moderate_roi": 12.5},
+            "risk_matrix": {"risk_level": "Medium Risk"},
+        }
+        json_path = report_dir / "sample_report.json"
+        md_path = report_dir / "sample_report.md"
+        json_path.write_text(json.dumps(payload))
+        md_path.write_text("# Sample Report")
+
+        summaries = list_report_summaries(report_dir)
+        detail = load_report_detail(report_dir, "sample_report")
+
+        self.assertEqual(summaries[0]["id"], "sample_report")
+        self.assertEqual(summaries[0]["recommendation"], "CONDITIONAL GO")
+        self.assertEqual(detail["markdown"], "# Sample Report")
 
     def _quality_results(self, recommendation="CONDITIONAL GO", analysis=None):
         return {
@@ -653,6 +681,13 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
         payload = search_response.json()
         self.assertEqual(payload["source"], "private dataset")
         self.assertEqual(payload["results"][0]["title"], "Lunar Signal")
+
+    def test_web_report_library_endpoints(self):
+        client = TestClient(app)
+        response = client.get("/api/reports")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("reports", response.json())
 
     def test_web_batch_analyze_starts_job(self):
         client = TestClient(app)

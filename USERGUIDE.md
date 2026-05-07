@@ -67,6 +67,7 @@ The web UI supports:
 - demo-mode toggle
 - live agent progress stream
 - rendered report preview
+- report history for previous local runs
 - project comparison table from pasted CSV
 - Markdown download
 - JSON download
@@ -122,6 +123,13 @@ Financial assumptions:
 4. Run the analysis. The report includes model assumptions, sensitivity rows, and break-even analysis.
 
 Leave scenario multiples at `0` to use genre defaults. Enter explicit values when you want to test a studio finance case.
+
+Report history:
+
+1. Scroll to **Report History**.
+2. Click **Refresh History** if you generated reports after opening the page.
+3. Click **Open** to preview an older report.
+4. Use **Markdown** or **JSON** links to download the saved artifacts.
 
 Project comparison run:
 

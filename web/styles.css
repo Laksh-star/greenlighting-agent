@@ -39,7 +39,8 @@ body {
 
 .input-panel,
 .status-panel,
-.report-panel {
+.report-panel,
+.history-panel {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -412,6 +413,7 @@ button:disabled {
 }
 
 .report-panel,
+.history-panel,
 .comparison-panel {
   margin-top: 18px;
 }
@@ -459,6 +461,50 @@ button:disabled {
 .comparison-table {
   overflow-x: auto;
   padding: 18px 20px 22px;
+}
+
+.history-list {
+  display: grid;
+  gap: 12px;
+  padding: 18px 20px 22px;
+}
+
+.history-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 14px;
+  padding: 14px;
+  align-items: center;
+}
+
+.history-card h3 {
+  font-size: 16px;
+  margin: 0;
+}
+
+.history-metrics,
+.history-actions {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+
+.history-metrics {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.history-actions a {
+  color: var(--accent);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.history-actions button {
+  min-height: 34px;
+  padding: 0 12px;
 }
 
 .comparison-table table {
@@ -579,6 +625,7 @@ button:disabled {
   .panel-header,
   .status-header,
   .report-toolbar,
+  .history-card,
   .actions,
   .download-actions,
   .comparison-status,
@@ -586,6 +633,10 @@ button:disabled {
   .private-dataset-actions {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .history-card {
+    display: flex;
   }
 
   button,

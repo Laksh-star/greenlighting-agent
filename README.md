@@ -30,6 +30,7 @@ AI-assisted greenlight analysis for film and TV projects. The app combines compa
 - **Report quality controls:** Blocks incomplete reports before save and warns when comparables fall back to input-only data.
 - **Audit artifacts:** Writes Markdown, structured JSON, run ledgers, token usage, estimated Anthropic cost, and batch summaries.
 - **Project comparison:** Run a pasted CSV batch from the browser and compare recommendations, confidence, ROI, and risk.
+- **Report history:** Browse and reopen previous local reports from the web UI without rerunning analysis.
 
 ## Demo Screenshots
 
@@ -134,6 +135,7 @@ Execution shape:
 4. The master orchestrator synthesizes a recommendation.
 5. Report quality checks validate recommendation consistency, comparable evidence, financial scenarios, and risk matrix coverage.
 6. Markdown, JSON, run ledger, and optional batch summaries are saved locally.
+7. The web report history reads saved JSON/Markdown artifacts for later review.
 
 ## Output Artifacts
 

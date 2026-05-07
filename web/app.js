@@ -10,6 +10,8 @@ const reportPreview = document.querySelector("#report-preview");
 const downloads = document.querySelector("#download-actions");
 const markdownDownload = document.querySelector("#markdown-download");
 const jsonDownload = document.querySelector("#json-download");
+const refreshHistory = document.querySelector("#refresh-history");
+const reportHistory = document.querySelector("#report-history");
 const batchCsv = document.querySelector("#batch-csv");
 const loadBatchSample = document.querySelector("#load-batch-sample");
 const runBatch = document.querySelector("#run-batch");
@@ -175,6 +177,10 @@ refreshButton.addEventListener("click", async () => {
   }
 });
 
+refreshHistory.addEventListener("click", async () => {
+  await loadReportHistory();
+});
+
 runBatch.addEventListener("click", async () => {
   if (!batchCsv.value.trim()) {
     batchStatus.textContent = "Add CSV rows before running batch";
@@ -267,6 +273,7 @@ async function finishJob() {
   jsonDownload.href = job.download_json_url;
   downloads.classList.remove("hidden");
   await loadReport(currentJobId);
+  await loadReportHistory();
 }
 
 async function finishBatchJob() {
@@ -288,6 +295,69 @@ async function loadReport(jobId) {
   }
   const markdown = await response.text();
   reportPreview.innerHTML = renderMarkdown(markdown);
+}
+
+async function loadReportHistory() {
+  reportHistory.innerHTML = `<p class="placeholder">Loading previous reports.</p>`;
+  try {
+    const response = await fetch("/api/reports?limit=20");
+    if (!response.ok) {
+      throw new Error(await response.text());
+    }
+    const payload = await response.json();
+    reportHistory.innerHTML = renderReportHistory(payload.reports || []);
+  } catch (error) {
+    reportHistory.innerHTML = `<p class="placeholder">${escapeHtml(error.message)}</p>`;
+  }
+}
+
+function renderReportHistory(reports) {
+  if (!reports.length) {
+    return `<p class="placeholder">No saved reports found yet.</p>`;
+  }
+  return reports.map((report) => `
+    <article class="history-card">
+      <div>
+        <h3>${escapeHtml(report.project_name)}</h3>
+        <p>${escapeHtml(report.genre || "Unknown")} · ${escapeHtml(report.platform || "n/a")} · ${formatDate(report.generated_at)}</p>
+      </div>
+      <div class="history-metrics">
+        <span class="mini-pill ${recommendationClass(report.recommendation)}">${escapeHtml(report.recommendation || "n/a")}</span>
+        <span>${Math.round((Number(report.confidence) || 0) * 100)}%</span>
+        <span>ROI ${escapeHtml(report.moderate_roi || "n/a")}</span>
+        <span>${escapeHtml(report.risk_level || "Risk n/a")}</span>
+      </div>
+      <div class="history-actions">
+        <button type="button" class="secondary open-history-report" data-id="${escapeHtml(report.id)}">Open</button>
+        <a href="/api/output?path=${encodeURIComponent(report.markdown_path)}">Markdown</a>
+        <a href="/api/output?path=${encodeURIComponent(report.json_path)}">JSON</a>
+      </div>
+    </article>
+  `).join("");
+}
+
+reportHistory.addEventListener("click", async (event) => {
+  const button = event.target.closest(".open-history-report");
+  if (!button) {
+    return;
+  }
+  await openHistoryReport(button.dataset.id);
+});
+
+async function openHistoryReport(reportId) {
+  const response = await fetch(`/api/reports/${encodeURIComponent(reportId)}`);
+  if (!response.ok) {
+    reportPreview.innerHTML = `<p class="placeholder">${escapeHtml(await response.text())}</p>`;
+    return;
+  }
+  const payload = await response.json();
+  currentJobId = "";
+  refreshButton.disabled = true;
+  reportPreview.innerHTML = renderMarkdown(payload.markdown || "");
+  setRecommendation(payload.summary.recommendation, payload.summary.confidence);
+  markdownDownload.href = `/api/output?path=${encodeURIComponent(payload.summary.markdown_path)}`;
+  jsonDownload.href = `/api/output?path=${encodeURIComponent(payload.summary.json_path)}`;
+  downloads.classList.remove("hidden");
 }
 
 function renderEvent(event) {
@@ -673,6 +743,19 @@ function formatNumber(valueToFormat) {
   return (Number(valueToFormat) || 0).toFixed(1);
 }
 
+function formatDate(valueToFormat) {
+  const date = new Date(valueToFormat);
+  if (Number.isNaN(date.getTime())) {
+    return "date n/a";
+  }
+  return date.toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
 function truncate(text, maxLength) {
   if (text.length <= maxLength) {
     return text;
@@ -683,3 +766,4 @@ function truncate(text, maxLength) {
 sampleButton.click();
 loadBatchSample.click();
 loadPrivateDatasets();
+loadReportHistory();
