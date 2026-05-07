@@ -12,12 +12,14 @@ from agents import BaseAgent
 from agents.financial_model import FinancialModelingAgent
 from agents.market_research import MarketResearchAgent
 from agents.master_agent import MasterOrchestratorAgent
+from fastapi.testclient import TestClient
 from main import GreenlightingCLI, parse_comparables
 from tools.tmdb_tools import TMDBClient
 from utils.analysis_report import build_analysis_payload
 from utils.batch import build_batch_summary_row, load_batch_projects
 from utils.report_quality import validate_report_quality
 from utils.run_ledger import build_run_ledger, summarize_model_usage
+from web_app import JOBS, app
 
 
 class FakeAgent(BaseAgent):
@@ -461,6 +463,40 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
         self.assertIn("BATCH ANALYSIS COMPLETE", result.stdout)
         self.assertTrue(list((repo / "outputs" / "batches").glob("*_summary.csv")))
         self.assertTrue(list((repo / "outputs" / "batches").glob("*_summary.json")))
+
+    def test_web_sample_endpoint_returns_form_payload(self):
+        client = TestClient(app)
+        response = client.get("/api/sample")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertIn("description", payload)
+        self.assertIsInstance(payload["comparables"], str)
+
+    def test_web_events_stream_job_progress(self):
+        client = TestClient(app)
+        job_id = "test-job"
+        JOBS[job_id] = {
+            "id": job_id,
+            "status": "completed",
+            "created_at": "test",
+            "events": [
+                {
+                    "timestamp": "test",
+                    "stage": "agent",
+                    "name": "market_research",
+                    "status": "completed",
+                }
+            ],
+            "result": {},
+            "error": "",
+        }
+
+        response = client.get(f"/api/jobs/{job_id}/events")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("market_research", response.text)
+        JOBS.pop(job_id, None)
 
 
 if __name__ == "__main__":

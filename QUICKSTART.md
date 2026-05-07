@@ -74,6 +74,14 @@ python main.py --sample
 python main.py --project "A sci-fi thriller about AI rebellion in 2045" --budget 50000000 --genre "Science Fiction" --platform "theatrical" --comparables "Arrival,Ex Machina,The Creator" --target-audience "adults 18-49"
 ```
 
+### Local Web Demo
+
+```bash
+uvicorn web_app:app --reload
+```
+
+Open `http://127.0.0.1:8000` to run the same analysis pipeline from a browser with progress updates, report preview, and Markdown/JSON downloads.
+
 ### Batch Mode
 
 ```bash

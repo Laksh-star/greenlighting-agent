@@ -4,6 +4,7 @@ Master Orchestrator Agent - Coordinates all subagents and synthesizes final reco
 
 from typing import Dict, Any, List
 import asyncio
+import inspect
 import re
 from agents import BaseAgent
 from agents.market_research import MarketResearchAgent
@@ -24,12 +25,13 @@ class MasterOrchestratorAgent(BaseAgent):
     Master agent that coordinates all subagents and makes final greenlight decision.
     """
     
-    def __init__(self):
+    def __init__(self, progress_callback=None):
         super().__init__(
             name="Master Greenlighting Orchestrator",
             role="Synthesizes all analyses and makes final greenlight recommendation",
             system_prompt=MASTER_ORCHESTRATOR_PROMPT
         )
+        self.progress_callback = progress_callback
         
         # Initialize all subagents
         self.subagents: Dict[str, BaseAgent] = {
@@ -64,10 +66,12 @@ class MasterOrchestratorAgent(BaseAgent):
         
         # Synthesize final recommendation
         print_header("📊 SYNTHESIZING FINAL RECOMMENDATION")
+        await self._emit_progress("synthesis", "master_orchestrator", "started")
         final_recommendation = await self._synthesize_recommendation(
             project_data,
             results
         )
+        await self._emit_progress("synthesis", "master_orchestrator", "completed")
         
         return {
             "project_data": project_data,
@@ -108,6 +112,7 @@ class MasterOrchestratorAgent(BaseAgent):
         # Market research runs first so downstream agents can use comparable evidence.
         market_agent = self.subagents["market_research"]
         print_info(f"Starting: {market_agent.name}")
+        await self._emit_progress("agent", "market_research", "started", completed, total_agents)
         agent_name, result = await self._run_single_agent(
             "market_research",
             market_agent,
@@ -123,12 +128,14 @@ class MasterOrchestratorAgent(BaseAgent):
         completed += 1
         progress = create_progress_bar(completed, total_agents, width=40)
         print_success(f"{progress}")
+        await self._emit_progress("agent", agent_name, "completed", completed, total_agents)
 
         tasks = []
         for name, agent in self.subagents.items():
             if name == "market_research":
                 continue
             print_info(f"Starting: {agent.name}")
+            await self._emit_progress("agent", name, "started", completed, total_agents)
             tasks.append(self._run_single_agent(name, agent, project_data))
 
         # Run remaining agents in parallel and collect named results.
@@ -140,6 +147,7 @@ class MasterOrchestratorAgent(BaseAgent):
             # Show progress
             progress = create_progress_bar(completed, total_agents, width=40)
             print_success(f"{progress}")
+            await self._emit_progress("agent", agent_name, "completed", completed, total_agents)
         
         print()
         print_success(f"All {total_agents} analyses complete!")
@@ -149,6 +157,31 @@ class MasterOrchestratorAgent(BaseAgent):
         print(format_analysis_summary(results))
         
         return results
+
+    async def _emit_progress(
+        self,
+        stage: str,
+        name: str,
+        status: str,
+        completed: int = None,
+        total: int = None,
+    ):
+        """Emit optional structured progress events for web/API clients."""
+        if not self.progress_callback:
+            return
+        event = {
+            "stage": stage,
+            "name": name,
+            "status": status,
+        }
+        if completed is not None:
+            event["completed"] = completed
+        if total is not None:
+            event["total"] = total
+
+        maybe_awaitable = self.progress_callback(event)
+        if inspect.isawaitable(maybe_awaitable):
+            await maybe_awaitable
     
     async def _run_single_agent(
         self,

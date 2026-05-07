@@ -16,6 +16,8 @@ def test_imports():
         ('dotenv', 'python-dotenv'),
         ('requests', 'requests'),
         ('pydantic', 'pydantic'),
+        ('fastapi', 'FastAPI'),
+        ('uvicorn', 'uvicorn'),
     ]
     
     for package, name in required_packages:

@@ -33,8 +33,8 @@ from utils.run_ledger import save_run_ledger
 class GreenlightingCLI:
     """Command-line interface for the Greenlighting Agent."""
     
-    def __init__(self):
-        self.master_agent = MasterOrchestratorAgent()
+    def __init__(self, progress_callback=None):
+        self.master_agent = MasterOrchestratorAgent(progress_callback=progress_callback)
         self.is_interactive = False
     
     async def analyze_project(

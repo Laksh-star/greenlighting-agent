@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Greenlighting Agent Demo</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="workspace">
+        <form id="analysis-form" class="input-panel">
+          <div class="panel-header">
+            <div>
+              <h1>Greenlighting Agent</h1>
+              <p>Local project analysis workspace</p>
+            </div>
+            <label class="toggle">
+              <input id="demo-mode" name="demo_mode" type="checkbox" checked />
+              <span>Demo mode</span>
+            </label>
+          </div>
+
+          <label class="field field-wide">
+            <span>Project description</span>
+            <textarea id="description" name="description" rows="7" required></textarea>
+          </label>
+
+          <div class="field-grid">
+            <label class="field">
+              <span>Budget</span>
+              <input id="budget" name="budget" type="number" min="0" step="1000000" />
+            </label>
+            <label class="field">
+              <span>Genre</span>
+              <input id="genre" name="genre" type="text" />
+            </label>
+            <label class="field">
+              <span>Platform</span>
+              <select id="platform" name="platform">
+                <option value="theatrical">Theatrical</option>
+                <option value="streaming">Streaming</option>
+                <option value="hybrid">Hybrid</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Target audience</span>
+              <input id="target-audience" name="target_audience" type="text" />
+            </label>
+          </div>
+
+          <label class="field field-wide">
+            <span>Comparables</span>
+            <input id="comparables" name="comparables" type="text" />
+          </label>
+
+          <div class="actions">
+            <button id="run-button" type="submit">Run Analysis</button>
+            <button id="sample-button" type="button" class="secondary">Load Sample</button>
+          </div>
+        </form>
+
+        <aside class="status-panel">
+          <div class="status-header">
+            <div>
+              <h2>Agent Progress</h2>
+              <p id="job-status">Idle</p>
+            </div>
+            <div id="recommendation-pill" class="pill">No run</div>
+          </div>
+          <div class="progress-track">
+            <div id="progress-fill"></div>
+          </div>
+          <ol id="event-list" class="event-list"></ol>
+          <div id="download-actions" class="download-actions hidden">
+            <a id="markdown-download" href="#">Markdown</a>
+            <a id="json-download" href="#">JSON</a>
+          </div>
+        </aside>
+      </section>
+
+      <section class="report-panel">
+        <div class="report-toolbar">
+          <h2>Report Preview</h2>
+          <button id="refresh-report" type="button" class="secondary" disabled>Refresh</button>
+        </div>
+        <article id="report-preview" class="report-preview">
+          <p class="placeholder">Run an analysis to preview the generated report.</p>
+        </article>
+      </section>
+    </main>
+    <script src="/static/app.js"></script>
+  </body>
+</html>
