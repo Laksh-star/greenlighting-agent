@@ -133,6 +133,12 @@ Report history:
 5. Use **Brief** to download a compact studio decision memo.
 6. Use **Markdown** or **JSON** links to download the saved artifacts.
 
+Slate dashboard:
+
+1. Scroll to **Slate Dashboard**.
+2. Use **Refresh Slate** after new runs to recalculate portfolio metrics.
+3. Review recommendation mix, risk mix, platform mix, budget exposure, and ranked candidates from saved local reports.
+
 Project comparison run:
 
 1. Scroll to **Project Comparison**.

@@ -10,6 +10,8 @@ const reportPreview = document.querySelector("#report-preview");
 const downloads = document.querySelector("#download-actions");
 const markdownDownload = document.querySelector("#markdown-download");
 const jsonDownload = document.querySelector("#json-download");
+const refreshSlate = document.querySelector("#refresh-slate");
+const slateDashboard = document.querySelector("#slate-dashboard");
 const refreshHistory = document.querySelector("#refresh-history");
 const reportHistory = document.querySelector("#report-history");
 const compareHistory = document.querySelector("#compare-history");
@@ -183,6 +185,11 @@ refreshButton.addEventListener("click", async () => {
 
 refreshHistory.addEventListener("click", async () => {
   await loadReportHistory();
+  await loadSlateDashboard();
+});
+
+refreshSlate.addEventListener("click", async () => {
+  await loadSlateDashboard();
 });
 
 compareHistory.addEventListener("click", () => {
@@ -282,6 +289,7 @@ async function finishJob() {
   downloads.classList.remove("hidden");
   await loadReport(currentJobId);
   await loadReportHistory();
+  await loadSlateDashboard();
 }
 
 async function finishBatchJob() {
@@ -320,6 +328,119 @@ async function loadReportHistory() {
   } catch (error) {
     reportHistory.innerHTML = `<p class="placeholder">${escapeHtml(error.message)}</p>`;
   }
+}
+
+async function loadSlateDashboard() {
+  slateDashboard.innerHTML = `<p class="placeholder">Loading slate metrics.</p>`;
+  try {
+    const response = await fetch("/api/slate-dashboard?limit=50");
+    if (!response.ok) {
+      throw new Error(await response.text());
+    }
+    const payload = await response.json();
+    slateDashboard.innerHTML = renderSlateDashboard(payload);
+  } catch (error) {
+    slateDashboard.innerHTML = `<p class="placeholder">${escapeHtml(error.message)}</p>`;
+  }
+}
+
+function renderSlateDashboard(payload) {
+  if (!payload.report_count) {
+    return `<p class="placeholder">No saved reports found yet.</p>`;
+  }
+  return `
+    <div class="slate-metric-grid">
+      ${renderSlateMetric("Reports", payload.report_count)}
+      ${renderSlateMetric("Budget", formatMoney(payload.total_budget))}
+      ${renderSlateMetric("Exposure", formatMoney(payload.total_exposure))}
+      ${renderSlateMetric("Avg ROI", `${formatNumber(payload.average_roi)}%`)}
+      ${renderSlateMetric("Confidence", `${Math.round((Number(payload.average_confidence) || 0) * 100)}%`)}
+      ${renderSlateMetric("Risk", formatNumber(payload.average_risk_score))}
+    </div>
+    <div class="slate-breakdown-grid">
+      ${renderBreakdown("Recommendation Mix", payload.recommendation_counts, true)}
+      ${renderBreakdown("Risk Mix", payload.risk_counts)}
+      ${renderBreakdown("Platform Mix", payload.platform_counts)}
+    </div>
+    <div class="slate-table-grid">
+      ${renderSlateTable("Best Candidates", payload.top_projects)}
+      ${renderSlateTable("Watchlist", payload.watchlist)}
+    </div>
+  `;
+}
+
+function renderSlateMetric(label, valueToRender) {
+  return `
+    <article class="slate-metric">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(valueToRender)}</strong>
+    </article>
+  `;
+}
+
+function renderBreakdown(title, rows, isRecommendation = false) {
+  const entries = Object.entries(rows || {}).filter(([, count]) => Number(count) > 0);
+  if (!entries.length) {
+    return `
+      <article class="slate-breakdown">
+        <h3>${escapeHtml(title)}</h3>
+        <p class="placeholder">No data yet.</p>
+      </article>
+    `;
+  }
+  return `
+    <article class="slate-breakdown">
+      <h3>${escapeHtml(title)}</h3>
+      <div class="breakdown-list">
+        ${entries.map(([label, count]) => `
+          <div>
+            <span>${isRecommendation ? `<span class="mini-pill ${recommendationClass(label)}">${escapeHtml(label)}</span>` : escapeHtml(label)}</span>
+            <strong>${escapeHtml(count)}</strong>
+          </div>
+        `).join("")}
+      </div>
+    </article>
+  `;
+}
+
+function renderSlateTable(title, rows) {
+  if (!rows.length) {
+    return `
+      <article class="slate-table-card">
+        <h3>${escapeHtml(title)}</h3>
+        <p class="placeholder">No projects yet.</p>
+      </article>
+    `;
+  }
+  return `
+    <article class="slate-table-card">
+      <h3>${escapeHtml(title)}</h3>
+      <div class="comparison-table slate-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Project</th>
+              <th>Rec</th>
+              <th>ROI</th>
+              <th>Risk</th>
+              <th>Score</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map((row) => `
+              <tr>
+                <td>${escapeHtml(row.project_name || "Untitled")}</td>
+                <td><span class="mini-pill ${recommendationClass(row.recommendation)}">${escapeHtml(row.recommendation || "n/a")}</span></td>
+                <td>${escapeHtml(row.moderate_roi || "n/a")}</td>
+                <td>${escapeHtml(row.risk_level || "n/a")}</td>
+                <td>${escapeHtml(row.slate_score)}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
+    </article>
+  `;
 }
 
 function renderReportHistory(reports) {
@@ -865,3 +986,4 @@ sampleButton.click();
 loadBatchSample.click();
 loadPrivateDatasets();
 loadReportHistory();
+loadSlateDashboard();

@@ -19,6 +19,7 @@ from tools.private_dataset import PRIVATE_DATASET_SAMPLE, private_dataset_store
 from utils.batch import build_batch_summary_row, load_batch_projects_from_text, save_batch_summary
 from utils.report_library import list_report_summaries, load_report_detail
 from utils.sample_data import SAMPLE_PROJECT
+from utils.slate_dashboard import build_slate_dashboard
 from utils.source_material import build_source_material_payload
 from utils.studio_brief import build_studio_brief
 
@@ -326,6 +327,13 @@ async def output_file(path: str = Query(...)):
 async def report_library(limit: int = Query(25, ge=1, le=100)):
     """List generated local reports."""
     return {"reports": list_report_summaries(OUTPUT_DIR, limit=limit)}
+
+
+@app.get("/api/slate-dashboard")
+async def slate_dashboard(limit: int = Query(50, ge=1, le=100)):
+    """Return slate-level metrics from saved local reports."""
+    reports = list_report_summaries(OUTPUT_DIR, limit=limit)
+    return build_slate_dashboard(reports)
 
 
 @app.get("/api/reports/{report_id}")

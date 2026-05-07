@@ -32,6 +32,7 @@ AI-assisted greenlight analysis for film and TV projects. The app combines compa
 - **Project comparison:** Run a pasted CSV batch from the browser and compare recommendations, confidence, ROI, and risk.
 - **Report history:** Browse, reopen, and compare previous local reports from the web UI without rerunning analysis.
 - **Studio briefs:** Download a compact decision memo from any saved report.
+- **Slate dashboard:** Review saved projects as a portfolio with budget exposure, recommendation mix, risk mix, and ranked candidates.
 
 ## Demo Screenshots
 

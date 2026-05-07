@@ -21,6 +21,7 @@ from utils.batch import build_batch_summary_row, load_batch_projects, load_batch
 from utils.report_quality import validate_report_quality
 from utils.report_library import list_report_summaries, load_report_detail
 from utils.run_ledger import build_run_ledger, summarize_model_usage
+from utils.slate_dashboard import build_slate_dashboard
 from utils.source_material import build_source_material_payload
 from utils.studio_brief import build_studio_brief
 from web_app import JOBS, app
@@ -323,6 +324,41 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
         self.assertIn("# Studio Greenlight Brief", brief)
         self.assertIn("**Recommendation:** GO", brief)
         self.assertIn("Comp A", brief)
+
+    def test_slate_dashboard_summarizes_report_rows(self):
+        dashboard = build_slate_dashboard([
+            {
+                "id": "go_report",
+                "project_name": "Go Project",
+                "recommendation": "GO",
+                "confidence": 0.9,
+                "budget": 5_000_000,
+                "total_exposure": 7_000_000,
+                "moderate_roi": 40,
+                "risk_level": "Low Risk",
+                "overall_risk_score": 3,
+                "platform": "theatrical",
+            },
+            {
+                "id": "watch_report",
+                "project_name": "Watch Project",
+                "recommendation": "CONDITIONAL GO",
+                "confidence": 0.7,
+                "budget": 2_000_000,
+                "total_exposure": 3_000_000,
+                "moderate_roi": -10,
+                "risk_level": "High Risk",
+                "overall_risk_score": 8,
+                "platform": "streaming",
+            },
+        ])
+
+        self.assertEqual(dashboard["report_count"], 2)
+        self.assertEqual(dashboard["recommendation_counts"]["GO"], 1)
+        self.assertEqual(dashboard["total_budget"], 7_000_000)
+        self.assertEqual(dashboard["average_roi"], 15)
+        self.assertEqual(dashboard["top_projects"][0]["project_name"], "Go Project")
+        self.assertEqual(dashboard["watchlist"][0]["project_name"], "Watch Project")
 
     def _quality_results(self, recommendation="CONDITIONAL GO", analysis=None):
         return {
@@ -737,6 +773,32 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("Studio Greenlight Brief", response.text)
+
+    def test_web_slate_dashboard_endpoint(self):
+        report_dir = Path("outputs/reports")
+        report_dir.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "project": {
+                "description": "Dashboard project",
+                "budget": 2_000_000,
+                "platform": "theatrical",
+            },
+            "recommendation": "GO",
+            "confidence": 0.85,
+            "financial_scenarios": {"moderate_roi": 30, "total_exposure": 3_000_000},
+            "risk_matrix": {"risk_level": "Low Risk", "overall_risk_score": 3},
+        }
+        (report_dir / "unit_dashboard_report.json").write_text(json.dumps(payload))
+        (report_dir / "unit_dashboard_report.md").write_text("# Dashboard Report")
+
+        client = TestClient(app)
+        response = client.get("/api/slate-dashboard?limit=10")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertGreaterEqual(body["report_count"], 1)
+        self.assertIn("recommendation_counts", body)
+        self.assertTrue(body["top_projects"])
 
     def test_web_batch_analyze_starts_job(self):
         client = TestClient(app)
