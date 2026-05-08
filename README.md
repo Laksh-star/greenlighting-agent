@@ -26,6 +26,7 @@ AI-assisted greenlight analysis for film and TV projects. The app combines compa
 - **Private dataset mode:** Save local studio datasets and run comparable search/analysis with private comps, TMDB, or both.
 - **Script/treatment input:** Upload or pass text/Markdown source material so creative assessment can evaluate more than a logline.
 - **Assumption controls:** Tune P&A, distribution fee, revenue share, streamer value, scenario multiples, and risk tolerance.
+- **Scenario comparison:** Compare conservative, base, and aggressive financial cases side by side.
 - **No-key demo mode:** Generates deterministic sample reports without Anthropic or TMDB credentials.
 - **Report quality controls:** Blocks incomplete reports before save and warns when comparables fall back to input-only data.
 - **Audit artifacts:** Writes Markdown, structured JSON, run ledgers, token usage, estimated Anthropic cost, and batch summaries.

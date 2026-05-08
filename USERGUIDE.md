@@ -120,9 +120,15 @@ Financial assumptions:
 1. Open **Financial assumptions** under the comparable search panel.
 2. Adjust P&A, distribution fee, theatrical share, streaming/license value, or scenario multiples.
 3. Choose a risk tolerance: `Balanced`, `Conservative`, or `Aggressive`.
-4. Run the analysis. The report includes model assumptions, sensitivity rows, and break-even analysis.
+4. Run the analysis. The report includes model assumptions, sensitivity rows, scenario comparison, and break-even analysis.
 
 Leave scenario multiples at `0` to use genre defaults. Enter explicit values when you want to test a studio finance case.
+
+Scenario comparison:
+
+1. Run a project analysis with a budget greater than zero.
+2. Review **Scenario Comparison** below the report preview.
+3. Compare conservative, base, and aggressive cases for exposure, break-even, base revenue/subscribers, net revenue, and ROI.
 
 Report history:
 

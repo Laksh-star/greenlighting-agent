@@ -230,6 +230,11 @@ async def job_status(job_id: str):
     """Return current job state and result metadata."""
     job = _get_job(job_id)
     result = job.get("result") or {}
+    financial_metadata = (
+        (result.get("subagent_results", {}).get("financial_model", {}) or {}).get("metadata", {})
+        if isinstance(result.get("subagent_results", {}), dict)
+        else {}
+    )
     return {
         "id": job_id,
         "kind": job.get("kind", "single"),
@@ -252,6 +257,7 @@ async def job_status(job_id: str):
         "download_json_url": f"/api/jobs/{job_id}/download/json"
         if result.get("analysis_json_path")
         else "",
+        "scenario_comparison": financial_metadata.get("scenario_comparison", []),
     }
 
 

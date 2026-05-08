@@ -9,7 +9,11 @@ from pathlib import Path
 from unittest.mock import patch
 
 from agents import BaseAgent
-from agents.financial_model import FinancialModelingAgent, normalize_financial_assumptions
+from agents.financial_model import (
+    FinancialModelingAgent,
+    build_scenario_comparison,
+    normalize_financial_assumptions,
+)
 from agents.market_research import MarketResearchAgent
 from agents.master_agent import MasterOrchestratorAgent
 from fastapi.testclient import TestClient
@@ -107,6 +111,19 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
         self.assertEqual(custom["assumptions"]["marketing_spend"], 20_000_000)
         self.assertEqual(custom["decision_thresholds"]["go_roi"], 60)
         self.assertTrue(custom["sensitivity_table"])
+
+    def test_scenario_comparison_builds_three_presets(self):
+        rows = build_scenario_comparison(
+            10_000_000,
+            "Horror",
+            "theatrical",
+            assumptions={"risk_tolerance": "balanced"},
+        )
+
+        self.assertEqual([row["case"] for row in rows], ["Conservative", "Base", "Aggressive"])
+        self.assertEqual(rows[0]["risk_tolerance"], "conservative")
+        self.assertEqual(rows[2]["risk_tolerance"], "aggressive")
+        self.assertGreater(rows[2]["base_roi"], rows[0]["base_roi"])
 
     def test_market_research_fallback_comparable_rows(self):
         agent = MarketResearchAgent()
@@ -231,6 +248,7 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
                     "metadata": {
                         "basic_metrics": {"moderate_roi": 42},
                         "assumptions": {"risk_tolerance": "balanced"},
+                        "scenario_comparison": [{"case": "Base", "base_roi": 42}],
                     },
                 },
                 "risk_analysis": {
@@ -257,6 +275,7 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
         self.assertEqual(payload["comparable_evidence"][0]["title"], "Arrival")
         self.assertEqual(payload["financial_scenarios"]["moderate_roi"], 42)
         self.assertEqual(payload["financial_assumptions"]["risk_tolerance"], "balanced")
+        self.assertEqual(payload["scenario_comparison"][0]["case"], "Base")
         self.assertEqual(payload["risk_matrix"]["risk_level"], "Medium Risk")
         self.assertEqual(payload["run_ledger_path"], "outputs/runs/test_run.json")
 
@@ -416,6 +435,17 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
                             budget=10_000_000,
                             platform="theatrical",
                         ),
+                        "scenario_comparison": [
+                            {
+                                "case": "Base",
+                                "risk_tolerance": "balanced",
+                                "total_exposure": 15_000_000,
+                                "break_even_revenue": 30_000_000,
+                                "base_gross_revenue": 24_000_000,
+                                "base_net_revenue": 12_000_000,
+                                "base_roi": -20,
+                            }
+                        ],
                     },
                 },
                 "risk_analysis": {
@@ -436,6 +466,7 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
             "### Comparable Evidence",
             "| Title | Year | Budget | Revenue | ROI | Rating | Similar Signals |",
             "### Financial Scenario Snapshot",
+            "### Scenario Comparison",
             "### Model Assumptions",
             "### Break-even Analysis",
             "### Risk Matrix",
@@ -865,6 +896,32 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
         self.assertEqual(response.status_code, 200)
         payload = response.json()
         self.assertIn("job_id", payload)
+
+    def test_web_job_status_includes_scenario_comparison(self):
+        client = TestClient(app)
+        JOBS["scenario-job"] = {
+            "id": "scenario-job",
+            "status": "completed",
+            "created_at": "test",
+            "events": [],
+            "result": {
+                "subagent_results": {
+                    "financial_model": {
+                        "metadata": {
+                            "scenario_comparison": [
+                                {"case": "Base", "base_roi": 12.5}
+                            ]
+                        }
+                    }
+                }
+            },
+            "error": "",
+        }
+
+        response = client.get("/api/jobs/scenario-job")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["scenario_comparison"][0]["case"], "Base")
 
     def test_web_analyze_accepts_source_material(self):
         client = TestClient(app)

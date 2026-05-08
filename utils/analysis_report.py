@@ -59,6 +59,10 @@ def build_analysis_payload(
             "assumptions",
             {},
         ),
+        "scenario_comparison": _agent_metadata(results, "financial_model").get(
+            "scenario_comparison",
+            [],
+        ),
         "sensitivity_table": _agent_metadata(results, "financial_model")
         .get("basic_metrics", {})
         .get("sensitivity_table", []),

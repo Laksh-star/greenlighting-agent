@@ -40,6 +40,7 @@ body {
 .input-panel,
 .status-panel,
 .report-panel,
+.scenario-panel,
 .slate-panel,
 .history-panel {
   background: var(--panel);
@@ -414,6 +415,7 @@ button:disabled {
 }
 
 .report-panel,
+.scenario-panel,
 .slate-panel,
 .history-panel,
 .comparison-panel {

@@ -253,6 +253,13 @@ class GreenlightingCLI:
                 lines.extend(self._format_sensitivity_table(sensitivity))
                 lines.append("")
 
+            scenario_comparison = self._get_scenario_comparison(results)
+            if scenario_comparison:
+                lines.append("### Scenario Comparison")
+                lines.append("")
+                lines.extend(self._format_scenario_comparison(scenario_comparison))
+                lines.append("")
+
             lines.append("### Break-even Analysis")
             lines.append("")
             lines.extend(self._format_break_even(financial_metrics))
@@ -321,6 +328,9 @@ class GreenlightingCLI:
 
     def _get_financial_metrics(self, results: Dict[str, Any]) -> Dict[str, Any]:
         return self._get_agent_metadata(results, "financial_model").get("basic_metrics", {})
+
+    def _get_scenario_comparison(self, results: Dict[str, Any]) -> list:
+        return self._get_agent_metadata(results, "financial_model").get("scenario_comparison", [])
 
     def _format_comparable_table(self, comparable_evidence: list) -> list:
         lines = [
@@ -400,6 +410,41 @@ class GreenlightingCLI:
                 f"{format_currency(row.get('gross_revenue', 0) or 0)} | "
                 f"{format_currency(row.get('net_revenue', 0) or 0)} | "
                 f"{row.get('roi', 0)}% |"
+            )
+        return lines
+
+    def _format_scenario_comparison(self, rows: list) -> list:
+        has_subscribers = any("break_even_subscribers" in row for row in rows)
+        if has_subscribers:
+            lines = [
+                "| Case | Risk Tolerance | Exposure | Break-even Subs | Base Subs | Base Net | Base ROI |",
+                "| --- | --- | ---: | ---: | ---: | ---: | ---: |",
+            ]
+            for row in rows:
+                lines.append(
+                    f"| {row.get('case', 'n/a')} | "
+                    f"{row.get('risk_tolerance', 'n/a')} | "
+                    f"{format_currency(row.get('total_exposure', 0) or 0)} | "
+                    f"{row.get('break_even_subscribers', 0):,} | "
+                    f"{row.get('base_subscribers', 0):,} | "
+                    f"{format_currency(row.get('base_net_revenue', 0) or 0)} | "
+                    f"{row.get('base_roi', 0)}% |"
+                )
+            return lines
+
+        lines = [
+            "| Case | Risk Tolerance | Exposure | Break-even Gross | Base Gross | Base Net | Base ROI |",
+            "| --- | --- | ---: | ---: | ---: | ---: | ---: |",
+        ]
+        for row in rows:
+            lines.append(
+                f"| {row.get('case', 'n/a')} | "
+                f"{row.get('risk_tolerance', 'n/a')} | "
+                f"{format_currency(row.get('total_exposure', 0) or 0)} | "
+                f"{format_currency(row.get('break_even_revenue', 0) or 0)} | "
+                f"{format_currency(row.get('base_gross_revenue', 0) or 0)} | "
+                f"{format_currency(row.get('base_net_revenue', 0) or 0)} | "
+                f"{row.get('base_roi', 0)}% |"
             )
         return lines
 

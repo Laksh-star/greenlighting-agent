@@ -46,6 +46,13 @@ class FinancialModelingAgent(BaseAgent):
             comparable_evidence=comparable_evidence,
             assumptions=assumptions,
         )
+        scenario_comparison = build_scenario_comparison(
+            budget,
+            genre,
+            platform,
+            comparable_evidence=comparable_evidence,
+            assumptions=assumptions,
+        )
 
         if project_data.get("demo_mode"):
             findings = self._demo_findings(budget, platform, metrics)
@@ -58,6 +65,7 @@ class FinancialModelingAgent(BaseAgent):
                     "genre": genre,
                     "basic_metrics": metrics,
                     "assumptions": assumptions,
+                    "scenario_comparison": scenario_comparison,
                 },
             )
         
@@ -113,6 +121,7 @@ For theatrical, provide box office projections.
                 "genre": genre,
                 "basic_metrics": metrics,
                 "assumptions": assumptions,
+                "scenario_comparison": scenario_comparison,
             }
         )
     
@@ -360,6 +369,150 @@ def build_streaming_sensitivity_table(budget: int, assumptions: Dict[str, Any]) 
             "roi": round(((net - total_exposure) / total_exposure) * 100, 2),
         })
     return rows
+
+
+def build_scenario_comparison(
+    budget: int,
+    genre: str,
+    platform: str,
+    comparable_evidence: list = None,
+    assumptions: Dict[str, Any] = None,
+) -> list:
+    """Compare conservative/base/aggressive preset assumption cases."""
+    if budget <= 0:
+        return []
+
+    comparable_evidence = comparable_evidence or []
+    base_assumptions = normalize_financial_assumptions(
+        assumptions,
+        budget=budget,
+        platform=platform,
+    )
+    comparable_revenues = [
+        item.get("revenue", 0)
+        for item in comparable_evidence
+        if item.get("revenue", 0) > 0
+    ]
+    comparable_average = (
+        sum(comparable_revenues) / len(comparable_revenues)
+        if comparable_revenues
+        else 0
+    )
+    genre_multiplier = {
+        "Action": 2.5,
+        "Comedy": 2.8,
+        "Drama": 2.2,
+        "Horror": 3.5,
+        "Science Fiction": 2.4,
+        "Unknown": 2.0,
+    }.get(genre, 2.0)
+
+    rows = []
+    for preset in _scenario_presets(base_assumptions, budget, genre_multiplier, platform):
+        preset_assumptions = normalize_financial_assumptions(
+            preset["assumptions"],
+            budget=budget,
+            platform=platform,
+        )
+        if platform in ("theatrical", "hybrid"):
+            sensitivity = build_sensitivity_table(
+                budget,
+                preset_assumptions,
+                comparable_average=comparable_average,
+                genre_multiplier=genre_multiplier,
+                platform=platform,
+            )
+            base_row = next(
+                (item for item in sensitivity if item.get("scenario") == "Base"),
+                sensitivity[0] if sensitivity else {},
+            )
+            total_exposure = budget + preset_assumptions["marketing_spend"]
+            net_revenue_share = max(
+                0.0,
+                preset_assumptions["theatrical_revenue_share"]
+                * (1 - preset_assumptions["distribution_fee_pct"]),
+            )
+            if platform == "hybrid":
+                net_revenue_share += 0.15
+            break_even = total_exposure / net_revenue_share if net_revenue_share > 0 else 0
+            rows.append({
+                "case": preset["case"],
+                "risk_tolerance": preset_assumptions["risk_tolerance"],
+                "total_exposure": round(total_exposure),
+                "break_even_revenue": round(break_even),
+                "base_gross_revenue": base_row.get("gross_revenue", 0),
+                "base_net_revenue": base_row.get("net_revenue", 0),
+                "base_roi": base_row.get("roi", 0),
+                "marketing_spend": preset_assumptions["marketing_spend"],
+            })
+        else:
+            sensitivity = build_streaming_sensitivity_table(budget, preset_assumptions)
+            base_row = next(
+                (item for item in sensitivity if item.get("scenario") == "Base"),
+                sensitivity[0] if sensitivity else {},
+            )
+            total_exposure = budget + preset_assumptions["marketing_spend"]
+            rows.append({
+                "case": preset["case"],
+                "risk_tolerance": preset_assumptions["risk_tolerance"],
+                "total_exposure": round(total_exposure),
+                "break_even_subscribers": round(
+                    total_exposure / preset_assumptions["subscriber_lifetime_value"]
+                ),
+                "base_subscribers": base_row.get("subscribers", 0),
+                "base_net_revenue": base_row.get("net_revenue", 0),
+                "base_roi": base_row.get("roi", 0),
+                "marketing_spend": preset_assumptions["marketing_spend"],
+            })
+    return rows
+
+
+def _scenario_presets(
+    base_assumptions: Dict[str, Any],
+    budget: int,
+    genre_multiplier: float,
+    platform: str,
+) -> list:
+    marketing = base_assumptions["marketing_spend"]
+    if platform in ("theatrical", "hybrid") and marketing == 0:
+        marketing = round(budget * 0.5)
+    return [
+        {
+            "case": "Conservative",
+            "assumptions": {
+                **base_assumptions,
+                "marketing_spend": round(marketing * 1.2),
+                "distribution_fee_pct": min(0.5, base_assumptions["distribution_fee_pct"] + 0.03),
+                "theatrical_revenue_share": max(0, base_assumptions["theatrical_revenue_share"] - 0.05),
+                "downside_revenue_multiplier": round(genre_multiplier * 0.6, 2),
+                "base_revenue_multiplier": round(genre_multiplier * 0.8, 2),
+                "upside_revenue_multiplier": round(genre_multiplier * 1.1, 2),
+                "subscriber_lifetime_value": max(1, round(base_assumptions["subscriber_lifetime_value"] * 0.85)),
+                "risk_tolerance": "conservative",
+            },
+        },
+        {
+            "case": "Base",
+            "assumptions": {
+                **base_assumptions,
+                "risk_tolerance": "balanced",
+            },
+        },
+        {
+            "case": "Aggressive",
+            "assumptions": {
+                **base_assumptions,
+                "marketing_spend": round(marketing * 0.85),
+                "distribution_fee_pct": max(0, base_assumptions["distribution_fee_pct"] - 0.02),
+                "theatrical_revenue_share": min(1, base_assumptions["theatrical_revenue_share"] + 0.05),
+                "downside_revenue_multiplier": round(genre_multiplier * 0.85, 2),
+                "base_revenue_multiplier": round(genre_multiplier * 1.2, 2),
+                "upside_revenue_multiplier": round(genre_multiplier * 1.7, 2),
+                "subscriber_lifetime_value": round(base_assumptions["subscriber_lifetime_value"] * 1.2),
+                "risk_tolerance": "aggressive",
+            },
+        },
+    ]
 
 
 def decision_thresholds(risk_tolerance: str) -> Dict[str, int]:

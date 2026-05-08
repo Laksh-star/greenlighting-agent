@@ -7,6 +7,8 @@ const jobStatus = document.querySelector("#job-status");
 const progressFill = document.querySelector("#progress-fill");
 const recommendationPill = document.querySelector("#recommendation-pill");
 const reportPreview = document.querySelector("#report-preview");
+const scenarioPanel = document.querySelector("#scenario-panel");
+const scenarioComparison = document.querySelector("#scenario-comparison");
 const downloads = document.querySelector("#download-actions");
 const markdownDownload = document.querySelector("#markdown-download");
 const jsonDownload = document.querySelector("#json-download");
@@ -284,6 +286,7 @@ async function finishJob() {
   runButton.disabled = false;
   refreshButton.disabled = false;
   setRecommendation(job.recommendation, job.confidence);
+  renderScenarioComparison(job.scenario_comparison || []);
   markdownDownload.href = job.download_markdown_url;
   jsonDownload.href = job.download_json_url;
   downloads.classList.remove("hidden");
@@ -576,6 +579,7 @@ async function openHistoryReport(reportId) {
   refreshButton.disabled = true;
   reportPreview.innerHTML = renderMarkdown(payload.markdown || "");
   setRecommendation(payload.summary.recommendation, payload.summary.confidence);
+  renderScenarioComparison(payload.payload.scenario_comparison || []);
   markdownDownload.href = `/api/output?path=${encodeURIComponent(payload.summary.markdown_path)}`;
   jsonDownload.href = `/api/output?path=${encodeURIComponent(payload.summary.json_path)}`;
   downloads.classList.remove("hidden");
@@ -818,8 +822,46 @@ function resetRunState() {
   recommendationPill.textContent = "Running";
   recommendationPill.className = "pill";
   downloads.classList.add("hidden");
+  renderScenarioComparison([]);
   refreshButton.disabled = true;
   reportPreview.innerHTML = `<p class="placeholder">Report will appear when the run completes.</p>`;
+}
+
+function renderScenarioComparison(rows) {
+  if (!rows.length) {
+    scenarioPanel.classList.add("hidden");
+    scenarioComparison.innerHTML = "";
+    return;
+  }
+  scenarioPanel.classList.remove("hidden");
+  const hasSubscribers = rows.some((row) => row.break_even_subscribers !== undefined);
+  const tableRows = rows.map((row) => `
+    <tr>
+      <td>${escapeHtml(row.case || "n/a")}</td>
+      <td>${escapeHtml(row.risk_tolerance || "n/a")}</td>
+      <td>${formatMoney(row.total_exposure)}</td>
+      <td>${hasSubscribers ? escapeHtml(formatInteger(row.break_even_subscribers)) : formatMoney(row.break_even_revenue)}</td>
+      <td>${hasSubscribers ? escapeHtml(formatInteger(row.base_subscribers)) : formatMoney(row.base_gross_revenue)}</td>
+      <td>${formatMoney(row.base_net_revenue)}</td>
+      <td>${escapeHtml(row.base_roi || 0)}%</td>
+    </tr>
+  `).join("");
+  scenarioComparison.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>Case</th>
+          <th>Risk</th>
+          <th>Exposure</th>
+          <th>${hasSubscribers ? "Break-even Subs" : "Break-even Gross"}</th>
+          <th>${hasSubscribers ? "Base Subs" : "Base Gross"}</th>
+          <th>Base Net</th>
+          <th>Base ROI</th>
+        </tr>
+      </thead>
+      <tbody>${tableRows}</tbody>
+    </table>
+  `;
 }
 
 function resetBatchState() {
@@ -962,6 +1004,10 @@ function formatMoney(amount) {
 
 function formatNumber(valueToFormat) {
   return (Number(valueToFormat) || 0).toFixed(1);
+}
+
+function formatInteger(valueToFormat) {
+  return (Number(valueToFormat) || 0).toLocaleString();
 }
 
 function formatDate(valueToFormat) {
