@@ -138,7 +138,8 @@ Report history:
 4. Select multiple **Compare** checkboxes and click **Compare Selected** for a side-by-side table.
 5. Use **Brief** to download a compact studio decision memo.
 6. Use **Print** to open a printable studio memo, then use browser print to save a PDF.
-7. Use **Markdown** or **JSON** links to download the saved artifacts.
+7. Use **Package** to download a zip bundle with the full report, JSON, brief, printable memo, assumptions, scenarios, and evidence.
+8. Use **Markdown** or **JSON** links to download the saved artifacts.
 
 Slate dashboard:
 

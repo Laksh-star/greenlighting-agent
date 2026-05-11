@@ -34,6 +34,7 @@ AI-assisted greenlight analysis for film and TV projects. The app combines compa
 - **Report history:** Browse, reopen, and compare previous local reports from the web UI without rerunning analysis.
 - **Studio briefs:** Download a compact decision memo from any saved report.
 - **Printable briefs:** Open a clean studio memo view and use browser print to save a PDF.
+- **Pitch packages:** Download a zip bundle with the full report, JSON, brief, printable memo, assumptions, scenarios, and evidence.
 - **Slate dashboard:** Review saved projects as a portfolio with budget exposure, recommendation mix, risk mix, and ranked candidates.
 
 ## Demo Screenshots

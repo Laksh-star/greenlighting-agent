@@ -5,6 +5,7 @@ import json
 import subprocess
 import sys
 import unittest
+import zipfile
 from pathlib import Path
 from unittest.mock import patch
 
@@ -24,6 +25,7 @@ from utils.analysis_report import build_analysis_payload
 from utils.batch import build_batch_summary_row, load_batch_projects, load_batch_projects_from_text
 from utils.report_quality import validate_report_quality
 from utils.report_library import list_report_summaries, load_report_detail
+from utils.pitch_package import build_pitch_package
 from utils.run_ledger import build_run_ledger, summarize_model_usage
 from utils.slate_dashboard import build_slate_dashboard
 from utils.source_material import build_source_material_payload
@@ -349,6 +351,43 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
         self.assertIn("Print / Save PDF", html)
         self.assertIn("Contained thriller", html)
         self.assertIn("@media print", html)
+
+    def test_pitch_package_contains_expected_artifacts(self):
+        detail = {
+            "payload": {
+                "project": {
+                    "description": "Package project",
+                    "budget": 3_000_000,
+                    "platform": "theatrical",
+                },
+                "recommendation": "GO",
+                "confidence": 0.9,
+                "decision_drivers": ["Clear audience"],
+                "financial_scenarios": {"moderate_roi": 30},
+                "scenario_comparison": [{"case": "Base", "base_roi": 30}],
+                "comparable_evidence": [{"title": "Comp"}],
+                "financial_assumptions": {"risk_tolerance": "balanced"},
+                "source_material": {},
+                "risk_matrix": {"risk_level": "Low Risk"},
+            },
+            "markdown": "# Full Report",
+        }
+
+        package = build_pitch_package(
+            "unit_package_report",
+            detail,
+            Path("outputs/test_packages"),
+        )
+
+        self.assertTrue(Path(package["zip_path"]).exists())
+        with zipfile.ZipFile(package["zip_path"]) as archive:
+            names = set(archive.namelist())
+
+        self.assertIn("unit_package_report/PACKAGE_SUMMARY.md", names)
+        self.assertIn("unit_package_report/FULL_REPORT.md", names)
+        self.assertIn("unit_package_report/analysis.json", names)
+        self.assertIn("unit_package_report/STUDIO_BRIEF_PRINT.html", names)
+        self.assertIn("unit_package_report/scenario_comparison.json", names)
 
     def test_slate_dashboard_summarizes_report_rows(self):
         dashboard = build_slate_dashboard([
@@ -832,6 +871,31 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
         self.assertIn("text/html", response.headers["content-type"])
         self.assertIn("Print / Save PDF", response.text)
         self.assertIn("Printable brief project", response.text)
+
+    def test_web_report_package_endpoint(self):
+        report_dir = Path("outputs/reports")
+        report_dir.mkdir(parents=True, exist_ok=True)
+        report_id = "unit_package_endpoint_report"
+        payload = {
+            "project": {"description": "Package endpoint project", "budget": 2_000_000},
+            "recommendation": "CONDITIONAL GO",
+            "confidence": 0.8,
+            "decision_drivers": ["Focused budget"],
+            "financial_scenarios": {"moderate_roi": 12},
+            "scenario_comparison": [{"case": "Base", "base_roi": 12}],
+            "comparable_evidence": [],
+            "financial_assumptions": {},
+            "risk_matrix": {},
+        }
+        (report_dir / f"{report_id}.json").write_text(json.dumps(payload))
+        (report_dir / f"{report_id}.md").write_text("# Full Report")
+
+        client = TestClient(app)
+        response = client.get(f"/api/reports/{report_id}/package")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers["content-type"], "application/zip")
+        self.assertIn("unit_package_endpoint_report.zip", response.headers["content-disposition"])
 
     def test_web_slate_dashboard_endpoint(self):
         report_dir = Path("outputs/reports")

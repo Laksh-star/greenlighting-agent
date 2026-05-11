@@ -470,6 +470,7 @@ function renderReportHistory(reports) {
         <button type="button" class="secondary open-history-report" data-id="${escapeHtml(report.id)}">Open</button>
         <a href="/api/reports/${encodeURIComponent(report.id)}/brief">Brief</a>
         <a href="/api/reports/${encodeURIComponent(report.id)}/brief-print" target="_blank" rel="noopener">Print</a>
+        <a href="/api/reports/${encodeURIComponent(report.id)}/package">Package</a>
         <a href="/api/output?path=${encodeURIComponent(report.markdown_path)}">Markdown</a>
         <a href="/api/output?path=${encodeURIComponent(report.json_path)}">JSON</a>
       </div>
@@ -530,6 +531,7 @@ function renderHistoryComparisonTable(rows) {
         <button type="button" class="secondary open-history-report" data-id="${escapeHtml(row.id)}">Open</button>
         <a href="/api/reports/${encodeURIComponent(row.id)}/brief">Brief</a>
         <a href="/api/reports/${encodeURIComponent(row.id)}/brief-print" target="_blank" rel="noopener">Print</a>
+        <a href="/api/reports/${encodeURIComponent(row.id)}/package">Package</a>
       </td>
     </tr>
   `).join("");

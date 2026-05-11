@@ -18,6 +18,7 @@ from tools.tmdb_tools import tmdb_client
 from tools.private_dataset import PRIVATE_DATASET_SAMPLE, private_dataset_store
 from utils.batch import build_batch_summary_row, load_batch_projects_from_text, save_batch_summary
 from utils.report_library import list_report_summaries, load_report_detail
+from utils.pitch_package import build_pitch_package
 from utils.sample_data import SAMPLE_PROJECT
 from utils.slate_dashboard import build_slate_dashboard
 from utils.source_material import build_source_material_payload
@@ -380,6 +381,23 @@ async def report_brief_print(report_id: str):
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid report id")
     return HTMLResponse(build_studio_brief_html(detail["payload"]))
+
+
+@app.get("/api/reports/{report_id}/package")
+async def report_package(report_id: str):
+    """Create and download a zip pitch package for one saved report."""
+    try:
+        detail = load_report_detail(OUTPUT_DIR, report_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Report not found")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid report id")
+    package = build_pitch_package(report_id, detail, OUTPUT_DIR.parent)
+    return FileResponse(
+        package["zip_path"],
+        media_type="application/zip",
+        filename=package["zip_name"],
+    )
 
 
 async def _run_analysis(job_id: str, request: AnalysisRequest):

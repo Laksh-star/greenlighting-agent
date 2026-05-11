@@ -45,7 +45,9 @@ outputs/reports/*.json
 outputs/runs/*.json
 outputs/batches/*.csv
 outputs/batches/*.json
+outputs/packages/
 outputs/test_private_data/
+outputs/test_packages/
 outputs/test_report_library/
 outputs/web_smoke/
 data/private/*.csv
