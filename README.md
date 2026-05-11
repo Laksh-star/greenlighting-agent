@@ -15,6 +15,8 @@ AI-assisted greenlight analysis for film and TV projects. The app combines compa
 
 ![Greenlighting Agent web demo](docs/screenshots/web-demo-report.png)
 
+Watch the demo video: [demo.mp4](demo.mp4)
+
 ## Highlights
 
 - **Local web demo:** FastAPI + HTML UI with a project form, live agent progress, report preview, comparison table, and Markdown/JSON downloads.
