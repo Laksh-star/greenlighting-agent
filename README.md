@@ -13,9 +13,11 @@
 
 AI-assisted greenlight analysis for film and TV projects. The app combines comparable-title evidence, deterministic financial scenarios, audience/competitive/creative/risk assessment, and a final GO / CONDITIONAL GO / NO-GO recommendation.
 
-![Greenlighting Agent web demo](docs/screenshots/web-demo-report.png)
+<p align="center">
+  <img src="demo.gif" alt="Greenlighting Agent demo" width="100%">
+</p>
 
-Watch the demo video: [demo.mp4](demo.mp4)
+Demo video: [demo.mp4](demo.mp4)
 
 ## Highlights
 
