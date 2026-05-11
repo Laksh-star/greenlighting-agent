@@ -8,7 +8,10 @@
 </p>
 
 <p align="center">
-  <strong>CLI</strong> · <strong>FastAPI Web Demo</strong> · <strong>TMDB Comparables</strong> · <strong>Markdown/JSON Reports</strong>
+  <img alt="CLI" src="https://img.shields.io/badge/CLI-1f2428?style=for-the-badge">
+  <img alt="FastAPI Web Demo" src="https://img.shields.io/badge/FastAPI%20Web%20Demo-236b5d?style=for-the-badge">
+  <img alt="TMDB Comparables" src="https://img.shields.io/badge/TMDB%20Comparables-01b4e4?style=for-the-badge">
+  <img alt="Markdown and JSON Reports" src="https://img.shields.io/badge/Markdown%2FJSON%20Reports-aa5a00?style=for-the-badge">
 </p>
 
 AI-assisted greenlight analysis for film and TV projects. The app combines comparable-title evidence, deterministic financial scenarios, audience/competitive/creative/risk assessment, and a final GO / CONDITIONAL GO / NO-GO recommendation.
