@@ -11,6 +11,7 @@
   <img alt="CLI" src="https://img.shields.io/badge/CLI-1f2428?style=for-the-badge">
   <img alt="FastAPI Web Demo" src="https://img.shields.io/badge/FastAPI%20Web%20Demo-236b5d?style=for-the-badge">
   <img alt="TMDB Comparables" src="https://img.shields.io/badge/TMDB%20Comparables-01b4e4?style=for-the-badge">
+  <img alt="CopilotKit Decision Room" src="https://img.shields.io/badge/CopilotKit%20Decision%20Room-111827?style=for-the-badge">
   <img alt="Markdown and JSON Reports" src="https://img.shields.io/badge/Markdown%2FJSON%20Reports-aa5a00?style=for-the-badge">
 </p>
 
@@ -43,12 +44,17 @@ Demo video: [demo.mp4](demo.mp4)
 - **Printable briefs:** Open a clean studio memo view and use browser print to save a PDF.
 - **Pitch packages:** Download a zip bundle with the full report, JSON, brief, printable memo, assumptions, scenarios, and evidence.
 - **Slate dashboard:** Review saved projects as a portfolio with budget exposure, recommendation mix, risk mix, and ranked candidates.
+- **CopilotKit decision room:** Optional React + CopilotKit UI with shared agent context, generative UI surfaces, frontend tools, and a local or LLM-backed Copilot runtime.
 
 ## Demo Screenshots
 
 | Project Form | Report Preview |
 | --- | --- |
 | ![Web demo project form](docs/screenshots/web-demo-form.png) | ![Web demo report preview](docs/screenshots/web-demo-report-preview.png) |
+
+| CopilotKit Decision Room | CopilotKit Package Gate |
+| --- | --- |
+| ![CopilotKit decision room](copilotkit-demo/screenshots/react-desktop.png) | ![CopilotKit package gate](copilotkit-demo/screenshots/desktop-package-gate.png) |
 
 ## Quick Start
 
@@ -75,6 +81,42 @@ TMDB_API_KEY=your_tmdb_key_here
 ```
 
 `TMDB_API_KEY` is optional. Without it, comparables still appear as input-only fallback evidence.
+
+## CopilotKit Decision Room
+
+The optional `copilotkit-demo/` app is a React + CopilotKit interface for the same backend workflow. It uses CopilotKit `1.57.3` with the v2 React exports:
+
+- `CopilotKitProvider`
+- `CopilotChat`
+- `useAgentContext`
+- `useComponent`
+- `useFrontendTool`
+
+Run the existing FastAPI backend first:
+
+```bash
+uvicorn web_app:app --host 127.0.0.1 --port 8000
+```
+
+Then run the CopilotKit UI:
+
+```bash
+cd copilotkit-demo
+npm install
+npm test
+npm run dev
+```
+
+Open `http://127.0.0.1:5173`.
+
+For an LLM-backed Copilot runtime, configure `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`, then run:
+
+```bash
+npm run copilot:runtime
+npm run dev:runtime
+```
+
+See [copilotkit-demo/README.md](copilotkit-demo/README.md) for runtime details, screenshots, and the local fallback mode.
 
 ## Common Commands
 
@@ -166,6 +208,7 @@ Generated files stay local by default:
 greenlighting-agent/
 ├── agents/                 # Master orchestrator and six subagents
 ├── docs/screenshots/       # README screenshots
+├── copilotkit-demo/         # Optional React + CopilotKit decision room
 ├── data/private/           # Local private datasets, not committed
 ├── examples/projects.csv   # Batch-mode sample input
 ├── tools/tmdb_tools.py     # TMDB comparable enrichment

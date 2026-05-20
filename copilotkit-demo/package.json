@@ -1,0 +1,30 @@
+{
+  "name": "studio-greenlight-copilot-demo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5173",
+    "dev:runtime": "VITE_COPILOTKIT_RUNTIME_URL=http://127.0.0.1:4010/api/copilotkit vite --host 127.0.0.1 --port 5173",
+    "copilot:runtime": "node scripts/copilot-runtime.mjs",
+    "build": "tsc && vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 4173",
+    "test": "node tests/smoke.mjs && npm run build"
+  },
+  "dependencies": {
+    "@copilotkit/a2ui-renderer": "^1.57.3",
+    "@copilotkit/react-core": "^1.57.3",
+    "@copilotkit/react-ui": "^1.57.3",
+    "@copilotkit/runtime": "^1.57.3",
+    "@vitejs/plugin-react": "^6.0.2",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.13",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.15",
+    "@types/react-dom": "^19.2.3"
+  }
+}
