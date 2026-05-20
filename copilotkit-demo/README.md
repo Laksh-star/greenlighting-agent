@@ -42,6 +42,27 @@ The Vite server proxies `/greenlight-api/*` to `http://127.0.0.1:8000/api/*`.
 | --- |
 | ![CopilotKit mobile decision room](screenshots/react-mobile.png) |
 
+## Architecture
+
+```mermaid
+flowchart LR
+    Workspace["React Decision Workspace"] --> Context["CopilotKit Context"]
+    Workspace --> Tools["Frontend Tools"]
+    Workspace --> Components["Generative UI Components"]
+
+    Context --> Copilot["Greenlight Copilot"]
+    Tools --> Copilot
+    Components --> Copilot
+
+    Workspace --> API["Vite Proxy"]
+    API --> Backend["FastAPI Greenlighting Backend"]
+    Backend --> Report["Report + Evidence"]
+    Report --> Context
+
+    Tools --> Gates["Human Approval Gates"]
+    Gates --> Package["Locked Pitch Package"]
+```
+
 ## Copilot Runtime
 
 By default the sidebar runs through `src/localGreenlightAgent.ts`, a local AG-UI agent registered with `agents__unsafe_dev_only`. This avoids a fake runtime endpoint and keeps the demo usable without API keys.
