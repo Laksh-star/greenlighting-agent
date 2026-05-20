@@ -13,7 +13,10 @@ loadEnvFile(resolve(process.cwd(), ".env.local"));
 if (process.env.GREENLIGHT_ENV_FILE) loadEnvFile(process.env.GREENLIGHT_ENV_FILE);
 
 const PROVIDER = process.env.OPENAI_API_KEY ? "openai" : process.env.ANTHROPIC_API_KEY ? "anthropic" : "none";
-const MODEL = process.env.OPENAI_MODEL || process.env.MODEL_NAME || (PROVIDER === "anthropic" ? "claude-3-5-sonnet-latest" : "gpt-4o-mini");
+const MODEL = process.env.OPENAI_MODEL ||
+  process.env.ANTHROPIC_MODEL ||
+  process.env.MODEL_NAME ||
+  (PROVIDER === "anthropic" ? "claude-sonnet-4-6" : "gpt-5.4-mini");
 
 function loadEnvFile(path) {
   try {
