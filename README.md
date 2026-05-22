@@ -118,6 +118,8 @@ npm run dev:runtime
 
 See [copilotkit-demo/README.md](copilotkit-demo/README.md) for runtime details, screenshots, and the local fallback mode.
 
+Builders who want to adapt this pattern for another workflow can use the companion Codex skill: [`copilotkit-workflow-ui-builder`](https://github.com/Laksh-star/codex-skills/tree/main/skills/copilotkit-workflow-ui-builder). It captures the reusable playbook for wrapping an existing backend with CopilotKit context, frontend tools, structured UI, approval gates, and validation.
+
 ## Common Commands
 
 Run a no-key sample:
