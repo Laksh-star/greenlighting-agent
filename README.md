@@ -4,6 +4,7 @@
   <a href="#quick-start">Quick Start</a> |
   <a href="#architecture">Architecture</a> |
   <a href="USERGUIDE.md">User Guide</a> |
+  <a href="STUDIO_LOT.md">Studio Lot</a> |
   <a href="#testing">Testing</a>
 </p>
 
@@ -93,6 +94,8 @@ With the web demo running, open `http://127.0.0.1:8000/lot`.
 - **Agent trailers** and the **Greenlight Office** act out a live run: lamps switch on as agents start, carts carry finished reports to the office, and the signal settles on the verdict.
 - **Vacant pads** and **Pitch a project** start a new analysis (demo mode by default). The new soundstage appears when the run completes.
 - Drag to pan, scroll to zoom, and use the map buttons to rotate or reset.
+
+See [STUDIO_LOT.md](STUDIO_LOT.md) for how the view maps to the data, what updates on its own, and how to extend it when you add features.
 
 The view reads the existing `/api/reports`, `/api/slate-dashboard`, `/api/analyze`, and job-event endpoints. When no reports are saved yet it shows a clearly labelled sample slate. Three.js is vendored in `web/vendor/`, so the page works offline.
 

@@ -777,6 +777,20 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
         )
         self.assertEqual(zeroed["marketing_spend"], 0)
 
+    def test_studio_lot_agent_roster_matches_orchestrator(self):
+        """Adding or renaming an agent must also update the Studio Lot view."""
+        import re
+
+        source = (Path(__file__).resolve().parent.parent / "web" / "lot.js").read_text()
+        roster_block = source.split("const AGENTS = [", 1)[1].split("];", 1)[0]
+        lot_keys = set(re.findall(r'key:\s*"([a-z_]+)"', roster_block))
+
+        self.assertEqual(
+            lot_keys,
+            set(MasterOrchestratorAgent().subagents),
+            "web/lot.js AGENTS is out of sync with the orchestrator; see STUDIO_LOT.md",
+        )
+
     def test_web_studio_lot_view_is_served(self):
         client = TestClient(app)
         response = client.get("/lot")
