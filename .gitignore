@@ -49,6 +49,7 @@ outputs/packages/
 outputs/test_private_data/
 outputs/test_packages/
 outputs/test_report_library/
+outputs/test_report_library_dots/
 outputs/web_smoke/
 data/private/*.csv
 data/private/*.json
