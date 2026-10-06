@@ -44,6 +44,7 @@ Demo video: [demo.mp4](demo.mp4)
 - **Printable briefs:** Open a clean studio memo view and use browser print to save a PDF.
 - **Pitch packages:** Download a zip bundle with the full report, JSON, brief, printable memo, assumptions, scenarios, and evidence.
 - **Slate dashboard:** Review saved projects as a portfolio with budget exposure, recommendation mix, risk mix, and ranked candidates.
+- **Studio Lot view:** An isometric, strategy-game style map of the slate at `/lot`. Each saved report is a soundstage coloured by verdict, the six agents are trailers that light up during a live run, and the Greenlight Office shows the decision.
 - **CopilotKit decision room:** Optional React + CopilotKit UI with shared agent context, generative UI surfaces, frontend tools, and a local or LLM-backed Copilot runtime.
 
 ## Demo Screenshots
@@ -81,6 +82,19 @@ TMDB_API_KEY=your_tmdb_key_here
 ```
 
 `TMDB_API_KEY` is optional. Without it, comparables still appear as input-only fallback evidence.
+
+## Studio Lot View
+
+![Studio Lot view](docs/screenshots/studio-lot.png)
+
+With the web demo running, open `http://127.0.0.1:8000/lot`.
+
+- **Soundstages** are saved reports. Roof colour is the verdict (green GO, amber CONDITIONAL GO, red NO-GO) and building size follows budget. Click one to open its numbers, scenarios, agent confidence, and decision drivers.
+- **Agent trailers** and the **Greenlight Office** act out a live run: lamps switch on as agents start, carts carry finished reports to the office, and the signal settles on the verdict.
+- **Vacant pads** and **Pitch a project** start a new analysis (demo mode by default). The new soundstage appears when the run completes.
+- Drag to pan, scroll to zoom, and use the map buttons to rotate or reset.
+
+The view reads the existing `/api/reports`, `/api/slate-dashboard`, `/api/analyze`, and job-event endpoints. When no reports are saved yet it shows a clearly labelled sample slate. Three.js is vendored in `web/vendor/`, so the page works offline.
 
 ## CopilotKit Decision Room
 

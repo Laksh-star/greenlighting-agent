@@ -132,6 +132,12 @@ async def index():
     return FileResponse(WEB_DIR / "index.html")
 
 
+@app.get("/lot")
+async def studio_lot():
+    """Serve the isometric studio-lot view of the slate."""
+    return FileResponse(WEB_DIR / "lot.html")
+
+
 @app.get("/api/sample")
 async def sample_project():
     """Return the deterministic no-key sample payload."""
