@@ -11,6 +11,8 @@ const AGENTS = [
   { key: "creative", short: "Creative", name: "Creative assessment" },
   { key: "risk_analysis", short: "Risk", name: "Risk analysis" },
 ];
+// Market research runs first; every other agent runs in the parallel step.
+const PARALLEL_AGENTS = AGENTS.length - 1;
 const MAX_STAGES = 12;
 const REPORT_LIMIT = 100;
 const EVENT_PACING_MS = 520;
@@ -303,6 +305,7 @@ function renderKpis() {
   else if (state.totalReports > shown) chip.textContent = `Lot shows the newest ${shown} of ${state.totalReports >= REPORT_LIMIT ? `${REPORT_LIMIT}+` : state.totalReports} reports`;
   else chip.textContent = `${shown} saved ${shown === 1 ? "report" : "reports"}`;
   $("#tab-slate-n").textContent = String(shown);
+  $("#tab-agents-n").textContent = String(AGENTS.length);
   $("#tab-watch-n").textContent = String((d.watchlist || []).length);
 }
 
@@ -453,7 +456,7 @@ function renderTracker() {
     steps = [
       ["Intake", s.intake, s.intake === "done" ? "Accepted" : "Queued"],
       ["Market research", s.market, s.market === "done" ? "Comparables in" : s.market === "active" ? "Pulling comparables" : "Waiting"],
-      ["Agent analysis", s.analysis, `${run.parallelDone}/5 agents`],
+      ["Agent analysis", s.analysis, `${run.parallelDone}/${PARALLEL_AGENTS} agents`],
       ["Synthesis", s.synthesis, s.synthesis === "active" ? "Weighing evidence" : s.synthesis === "done" ? "Complete" : "Waiting"],
       ["Decision", s.decision, s.decision === "done" ? esc(run.verdict || "Ready") : "Pending"],
     ];
@@ -467,7 +470,7 @@ function renderTracker() {
     steps = [
       ["Intake", "done", esc(report.genre || "Logged")],
       ["Market research", "done", comps && !report.is_sample ? `${comps} comparables` : "Comparables in"],
-      ["Agent analysis", "done", "5/5 agents"],
+      ["Agent analysis", "done", `${PARALLEL_AGENTS}/${PARALLEL_AGENTS} agents`],
       ["Synthesis", "done", `${Math.round((Number(report.confidence) || 0) * 100)}% confidence`],
       ["Decision", "done", esc(report.recommendation || "Unrated")],
     ];
@@ -774,8 +777,8 @@ async function applyRunEvent(event) {
       lot.dispatchCourier(event.name);
       if (isMarket) s.market = "done";
       else {
-        run.parallelDone = Math.min(run.parallelDone + 1, 5);
-        if (run.parallelDone >= 5) s.analysis = "done";
+        run.parallelDone = Math.min(run.parallelDone + 1, PARALLEL_AGENTS);
+        if (run.parallelDone >= PARALLEL_AGENTS) s.analysis = "done";
       }
     }
   } else if (event.stage === "synthesis") {
