@@ -320,6 +320,21 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
         self.assertEqual(summaries[0]["overall_risk_score"], "")
         self.assertEqual(detail["markdown"], "# Sample Report")
 
+    def test_report_library_loads_ids_containing_dots(self):
+        report_dir = Path("outputs/test_report_library_dots")
+        report_dir.mkdir(parents=True, exist_ok=True)
+        report_id = "A_contained_sci-fi_thriller_about..._20260507_100000"
+        (report_dir / f"{report_id}.json").write_text(json.dumps({"recommendation": "GO"}))
+
+        summaries = list_report_summaries(report_dir)
+        detail = load_report_detail(report_dir, summaries[0]["id"])
+
+        self.assertEqual(summaries[0]["id"], report_id)
+        self.assertEqual(detail["summary"]["recommendation"], "GO")
+        self.assertEqual(load_report_detail(report_dir, f"{report_id}.json")["summary"]["id"], report_id)
+        with self.assertRaises(FileNotFoundError):
+            load_report_detail(report_dir, "../test_report_library/sample_report")
+
     def test_studio_brief_generates_decision_memo(self):
         payload = {
             "project": {
@@ -744,6 +759,32 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
         payload = response.json()
         self.assertIn("description", payload)
         self.assertIsInstance(payload["comparables"], str)
+
+    def test_web_analysis_request_leaves_marketing_to_model_default(self):
+        from web_app import AnalysisRequest
+
+        blank = AnalysisRequest(description="A contained thriller about a crew")
+        explicit_zero = AnalysisRequest(description="A contained thriller about a crew", marketing_spend=0)
+
+        self.assertIsNone(blank.marketing_spend)
+        self.assertEqual(explicit_zero.marketing_spend, 0)
+        defaults = normalize_financial_assumptions(
+            {"marketing_spend": blank.marketing_spend}, budget=18_000_000, platform="hybrid"
+        )
+        self.assertEqual(defaults["marketing_spend"], 9_000_000)
+        zeroed = normalize_financial_assumptions(
+            {"marketing_spend": explicit_zero.marketing_spend}, budget=18_000_000, platform="hybrid"
+        )
+        self.assertEqual(zeroed["marketing_spend"], 0)
+
+    def test_web_studio_lot_view_is_served(self):
+        client = TestClient(app)
+        response = client.get("/lot")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("/static/lot.js", response.text)
+        for asset in ("lot.js", "lot-scene.js", "lot.css", "vendor/three.module.min.js"):
+            self.assertEqual(client.get(f"/static/{asset}").status_code, 200, asset)
 
     def test_web_sample_batch_endpoint_returns_csv(self):
         client = TestClient(app)

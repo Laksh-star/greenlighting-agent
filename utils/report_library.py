@@ -37,7 +37,10 @@ def load_report_detail(report_dir: Path, report_id: str) -> Dict[str, Any]:
 
 def safe_report_json_path(report_dir: Path, report_id: str) -> Path:
     """Resolve a report id to a JSON path inside the report directory."""
-    safe_id = Path(report_id).stem
+    # Report ids can contain dots ("A_long_title..._20260101_120000"), so only
+    # strip a literal .json suffix; Path.stem would cut the id at its last dot.
+    name = Path(report_id).name
+    safe_id = name[: -len(".json")] if name.endswith(".json") else name
     candidate = (report_dir / f"{safe_id}.json").resolve()
     root = report_dir.resolve()
     if root not in candidate.parents or candidate.suffix != ".json":

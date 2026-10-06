@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Studio Lot · Greenlighting Agent</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="/static/lot.css" />
+    <script type="importmap">
+      { "imports": { "three": "/static/vendor/three.module.min.js" } }
+    </script>
+  </head>
+  <body>
+    <canvas id="scene" aria-label="Isometric studio lot. Each soundstage is a project on the slate."></canvas>
+
+    <header class="topbar">
+      <a class="brand" href="/lot" aria-label="Studio Lot home">
+        <svg viewBox="0 0 32 32" aria-hidden="true">
+          <rect x="3" y="3" width="26" height="26" rx="8" fill="var(--brand)" />
+          <circle cx="16" cy="10" r="2.6" fill="#fff" opacity=".45" />
+          <circle cx="16" cy="16" r="2.6" fill="#fff" opacity=".45" />
+          <circle cx="16" cy="22" r="3" fill="#fff" />
+        </svg>
+        <span>Studio Lot</span>
+      </a>
+
+      <div class="search">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="9" cy="9" r="6" /><path d="m14 14 4 4" /></svg>
+        <input id="search" type="search" placeholder="Search projects, genres, verdicts…" autocomplete="off" aria-label="Search the slate" />
+        <ul id="search-results" class="search-results" hidden></ul>
+      </div>
+
+      <div class="topbar-right">
+        <span id="slate-chip" class="chip">Loading slate…</span>
+        <span class="chip chip-live"><i></i><b id="clock">--:--</b></span>
+        <a class="btn btn-ghost" href="/">Classic view</a>
+        <button id="pitch-open" class="btn btn-primary" type="button">Pitch a project</button>
+      </div>
+    </header>
+
+    <section class="kpis" aria-label="Slate totals">
+      <article class="card kpi">
+        <span class="kpi-icon" data-tone="brand">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20V9l9-5 9 5v11H3Z" /><path d="M9 20v-6h6v6" /></svg>
+        </span>
+        <div>
+          <p class="kpi-label">Projects on the slate</p>
+          <p class="kpi-value" id="kpi-projects">–</p>
+          <p class="kpi-sub" id="kpi-projects-sub">&nbsp;</p>
+        </div>
+      </article>
+      <article class="card kpi">
+        <span class="kpi-icon" data-tone="amber">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M12 7v10M9.3 9.6c.5-1 1.5-1.4 2.7-1.4 1.6 0 2.8.8 2.8 2 0 2.8-5.6 1.2-5.6 4 0 1.2 1.3 2 2.9 2 1.2 0 2.3-.5 2.8-1.5" /></svg>
+        </span>
+        <div>
+          <p class="kpi-label">Capital at risk</p>
+          <p class="kpi-value" id="kpi-exposure">–</p>
+          <p class="kpi-sub" id="kpi-exposure-sub">&nbsp;</p>
+        </div>
+      </article>
+      <article class="card kpi">
+        <span class="kpi-icon" data-tone="green">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l5-5 4 3 7-8" /><path d="M15 7h5v5" /></svg>
+        </span>
+        <div>
+          <p class="kpi-label">Average base ROI</p>
+          <p class="kpi-value" id="kpi-roi">–</p>
+          <p class="kpi-sub" id="kpi-roi-sub">&nbsp;</p>
+        </div>
+      </article>
+    </section>
+
+    <nav class="card mapctl" aria-label="Map controls">
+      <button type="button" data-ctl="in" title="Zoom in" aria-label="Zoom in"><svg viewBox="0 0 20 20"><path d="M10 4v12M4 10h12" /></svg></button>
+      <button type="button" data-ctl="out" title="Zoom out" aria-label="Zoom out"><svg viewBox="0 0 20 20"><path d="M4 10h12" /></svg></button>
+      <hr />
+      <button type="button" data-ctl="left" title="Rotate left" aria-label="Rotate left"><svg viewBox="0 0 20 20"><path d="M4 9a6 6 0 1 1 1.8 5" /><path d="M4 4v5h5" /></svg></button>
+      <button type="button" data-ctl="right" title="Rotate right" aria-label="Rotate right"><svg viewBox="0 0 20 20"><path d="M16 9a6 6 0 1 0-1.8 5" /><path d="M16 4v5h-5" /></svg></button>
+      <button type="button" data-ctl="home" title="Reset view" aria-label="Reset view"><svg viewBox="0 0 20 20"><path d="M3.5 9.5 10 4l6.5 5.5V16h-4.5v-4h-4v4H3.5Z" /></svg></button>
+    </nav>
+
+    <aside class="card detail" id="detail" aria-live="polite"></aside>
+
+    <section class="card tracker" id="tracker" aria-label="Greenlight pipeline"></section>
+
+    <section class="card roster" aria-label="Slate lists">
+      <header class="roster-head">
+        <div class="tabs" role="tablist">
+          <button role="tab" data-tab="slate" aria-selected="true">Slate <em id="tab-slate-n"></em></button>
+          <button role="tab" data-tab="watch" aria-selected="false">Watchlist <em id="tab-watch-n"></em></button>
+          <button role="tab" data-tab="agents" aria-selected="false">Agents <em id="tab-agents-n">6</em></button>
+        </div>
+      </header>
+      <ul class="roster-list" id="roster-list"></ul>
+    </section>
+
+    <div id="tooltip" class="tooltip" hidden></div>
+    <div id="toast" class="toast" hidden role="status"></div>
+
+    <dialog id="pitch" class="pitch">
+      <form id="pitch-form" method="dialog">
+        <header>
+          <div>
+            <p class="eyebrow">New soundstage</p>
+            <h2>Pitch a project</h2>
+          </div>
+          <button type="button" class="icon-btn" id="pitch-close" aria-label="Close">
+            <svg viewBox="0 0 20 20"><path d="m5 5 10 10M15 5 5 15" /></svg>
+          </button>
+        </header>
+        <label class="field">
+          <span>Logline</span>
+          <textarea name="description" rows="3" required minlength="10"></textarea>
+        </label>
+        <div class="field-row">
+          <label class="field"><span>Budget (USD)</span><input name="budget" type="number" min="0" step="500000" required /></label>
+          <label class="field"><span>Genre</span><input name="genre" type="text" required /></label>
+          <label class="field">
+            <span>Platform</span>
+            <select name="platform">
+              <option value="theatrical">Theatrical</option>
+              <option value="streaming">Streaming</option>
+              <option value="hybrid">Hybrid</option>
+            </select>
+          </label>
+        </div>
+        <label class="field"><span>Comparable titles</span><input name="comparables" type="text" placeholder="Comma separated" /></label>
+        <label class="field"><span>Target audience</span><input name="target_audience" type="text" /></label>
+        <label class="field">
+          <span>Marketing / P&amp;A (USD)</span>
+          <input name="marketing_spend" type="number" min="0" step="500000" placeholder="Model default" />
+          <small>Leave blank for the model default: 50% of budget for theatrical and hybrid, none for streaming. Enter 0 for no marketing spend.</small>
+        </label>
+        <footer>
+          <label class="switch">
+            <input name="demo_mode" type="checkbox" checked />
+            <span>Demo mode <small>no API keys, deterministic result</small></span>
+          </label>
+          <button class="btn btn-primary" type="submit" id="pitch-submit">Send to the agents</button>
+        </footer>
+      </form>
+    </dialog>
+
+    <script type="module" src="/static/lot.js"></script>
+  </body>
+</html>
