@@ -44,7 +44,7 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20V9l9-5 9 5v11H3Z" /><path d="M9 20v-6h6v6" /></svg>
         </span>
         <div>
-          <p class="kpi-label">Projects on the lot</p>
+          <p class="kpi-label">Projects on the slate</p>
           <p class="kpi-value" id="kpi-projects">–</p>
           <p class="kpi-sub" id="kpi-projects-sub">&nbsp;</p>
         </div>
@@ -127,6 +127,11 @@
         </div>
         <label class="field"><span>Comparable titles</span><input name="comparables" type="text" placeholder="Comma separated" /></label>
         <label class="field"><span>Target audience</span><input name="target_audience" type="text" /></label>
+        <label class="field">
+          <span>Marketing / P&amp;A (USD)</span>
+          <input name="marketing_spend" type="number" min="0" step="500000" placeholder="Model default" />
+          <small>Leave blank for the model default: 50% of budget for theatrical and hybrid, none for streaming. Enter 0 for no marketing spend.</small>
+        </label>
         <footer>
           <label class="switch">
             <input name="demo_mode" type="checkbox" checked />

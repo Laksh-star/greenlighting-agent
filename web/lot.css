@@ -995,6 +995,11 @@ svg {
   box-shadow: 0 0 0 3px var(--brand-soft);
 }
 
+.field small {
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
 .field-row {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;

@@ -5,7 +5,7 @@ import json
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, StreamingResponse
@@ -108,7 +108,9 @@ class AnalysisRequest(BaseModel):
     demo_mode: bool = False
     comparable_source: str = Field("tmdb", pattern="^(tmdb|private|both)$")
     private_dataset_id: str = ""
-    marketing_spend: int = Field(0, ge=0)
+    # None means "use the finance model's default" (50% of budget for theatrical
+    # and hybrid); an explicit 0 still means no marketing spend.
+    marketing_spend: Optional[int] = Field(None, ge=0)
     distribution_fee_pct: float = Field(0.12, ge=0, le=0.5)
     theatrical_revenue_share: float = Field(0.5, ge=0, le=1)
     streaming_license_value: int = Field(0, ge=0)

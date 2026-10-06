@@ -12,6 +12,7 @@ const AGENTS = [
   { key: "risk_analysis", short: "Risk", name: "Risk analysis" },
 ];
 const MAX_STAGES = 12;
+const REPORT_LIMIT = 100;
 const EVENT_PACING_MS = 520;
 
 const $ = (selector) => document.querySelector(selector);
@@ -230,7 +231,7 @@ async function loadSlate({ selectNewest = false } = {}) {
   let reports = [];
   let dashboard = null;
   try {
-    const [library, slate] = await Promise.all([getJSON("/api/reports?limit=100"), getJSON("/api/slate-dashboard?limit=100")]);
+    const [library, slate] = await Promise.all([getJSON(`/api/reports?limit=${REPORT_LIMIT}`), getJSON(`/api/slate-dashboard?limit=${REPORT_LIMIT}`)]);
     reports = library.reports || [];
     dashboard = slate;
   } catch (error) {
@@ -288,7 +289,9 @@ async function loadDetail(id) {
 function renderKpis() {
   const d = state.dashboard || {};
   const counts = d.recommendation_counts || {};
-  $("#kpi-projects").textContent = String(d.report_count ?? 0);
+  // The page asks the API for at most 100 reports, so 100 is a floor, not a count.
+  const count = d.report_count ?? 0;
+  $("#kpi-projects").textContent = !state.isSample && count >= REPORT_LIMIT ? `${REPORT_LIMIT}+` : String(count);
   $("#kpi-projects-sub").textContent = `${counts.GO || 0} go · ${counts["CONDITIONAL GO"] || 0} conditional · ${counts["NO-GO"] || 0} no-go`;
   $("#kpi-exposure").textContent = money(d.total_exposure);
   $("#kpi-exposure-sub").textContent = `${money(d.total_budget)} production budgets`;
@@ -297,7 +300,7 @@ function renderKpis() {
   const shown = state.reports.length;
   const chip = $("#slate-chip");
   if (state.isSample) chip.textContent = "Sample slate · no saved reports yet";
-  else if (state.totalReports > shown) chip.textContent = `Newest ${shown} of ${state.totalReports} reports on the lot`;
+  else if (state.totalReports > shown) chip.textContent = `Lot shows the newest ${shown} of ${state.totalReports >= REPORT_LIMIT ? `${REPORT_LIMIT}+` : state.totalReports} reports`;
   else chip.textContent = `${shown} saved ${shown === 1 ? "report" : "reports"}`;
   $("#tab-slate-n").textContent = String(shown);
   $("#tab-watch-n").textContent = String((d.watchlist || []).length);
@@ -678,6 +681,9 @@ pitchForm.addEventListener("submit", async (event) => {
     target_audience: String(form.get("target_audience") || "").trim() || "general",
     demo_mode: form.get("demo_mode") === "on",
   };
+  // Blank means "let the finance model pick its default"; only send a number the user typed.
+  const marketing = String(form.get("marketing_spend") ?? "").trim();
+  if (marketing !== "" && Number.isFinite(Number(marketing))) body.marketing_spend = Math.max(0, Math.round(Number(marketing)));
   const submit = $("#pitch-submit");
   submit.disabled = true;
   try {

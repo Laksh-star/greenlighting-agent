@@ -760,6 +760,23 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
         self.assertIn("description", payload)
         self.assertIsInstance(payload["comparables"], str)
 
+    def test_web_analysis_request_leaves_marketing_to_model_default(self):
+        from web_app import AnalysisRequest
+
+        blank = AnalysisRequest(description="A contained thriller about a crew")
+        explicit_zero = AnalysisRequest(description="A contained thriller about a crew", marketing_spend=0)
+
+        self.assertIsNone(blank.marketing_spend)
+        self.assertEqual(explicit_zero.marketing_spend, 0)
+        defaults = normalize_financial_assumptions(
+            {"marketing_spend": blank.marketing_spend}, budget=18_000_000, platform="hybrid"
+        )
+        self.assertEqual(defaults["marketing_spend"], 9_000_000)
+        zeroed = normalize_financial_assumptions(
+            {"marketing_spend": explicit_zero.marketing_spend}, budget=18_000_000, platform="hybrid"
+        )
+        self.assertEqual(zeroed["marketing_spend"], 0)
+
     def test_web_studio_lot_view_is_served(self):
         client = TestClient(app)
         response = client.get("/lot")
