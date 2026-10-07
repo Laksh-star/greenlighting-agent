@@ -356,10 +356,16 @@ function renderDetail(report, payload) {
       </div>
     </div>
     <div class="verdict-row">
+      <span>AI recommendation</span>
       ${badge(report.recommendation)}
       <span>${Math.round(confidence * 100)}% confidence</span>
       <span>· ${esc(report.platform || "platform n/a")}</span>
     </div>
+    ${report.is_sample ? "" : `<section id="producer-decision" aria-label="Producer decision">
+      <p class="section-title">Producer decision</p>
+      <p>Awaiting review</p>
+      <button class="btn btn-ghost" id="decision-start">Record producer decision</button>
+    </section>`}
     <div class="tiles">
       <div class="tile">
         <p class="tile-label">Budget</p>
@@ -432,6 +438,14 @@ function renderDetail(report, payload) {
     }`;
   if (!report.is_sample) {
     $("#reanalyze").addEventListener("click", () => reviseProject(report));
+    $("#decision-start").addEventListener("click", async () => {
+      try {
+        const workspace = await ensureWorkspace(report);
+        if (state.selectedId !== report.id) return;
+        renderProducerDecision(report, workspace);
+        $("#decision-editor").open = true;
+      } catch (error) { toast(error.message); }
+    });
     if (report.workspace_id) renderVersions(report).catch((error) => toast(error.message));
   }
 }
@@ -439,6 +453,7 @@ function renderDetail(report, payload) {
 async function renderVersions(report) {
   const workspace = await getJSON(`/api/projects/${encodeURIComponent(report.workspace_id)}`);
   if (state.selectedId !== report.id) return;
+  renderProducerDecision(report, workspace);
   const container = $("#versions");
   if (!container) return;
   container.innerHTML = `<p class="section-title">Analysis versions <span>${workspace.versions.length}</span></p>
@@ -475,13 +490,65 @@ async function renderVersions(report) {
   }
 }
 
+async function ensureWorkspace(report) {
+  const workspace = report.workspace_id
+    ? await getJSON(`/api/projects/${encodeURIComponent(report.workspace_id)}`)
+    : await getJSON("/api/projects", {method: "POST", headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({name: report.project_name, report_id: report.id})});
+  report.workspace_id = workspace.id;
+  return workspace;
+}
+
+function renderProducerDecision(report, workspace) {
+  const container = $("#producer-decision");
+  if (!container) return;
+  const currentVersion = workspace.versions[0].number;
+  const current = workspace.decisions.find((d) => d.version === currentVersion);
+  const previous = workspace.decisions[0];
+  const versionName = (number) => workspace.versions.find((v) => v.number === number)?.label || `Version ${number}`;
+  const entry = (d) => `<li><b>${esc(d.status)}</b> · ${esc(versionName(d.version))}
+    <p>${esc(d.reviewer)} · ${esc(new Date(d.created_at).toLocaleString())}</p>
+    <p class="decision-text">${esc(d.notes)}</p>
+    ${d.conditions ? `<p class="decision-text"><b>Conditions:</b> ${esc(d.conditions)}</p>` : ""}</li>`;
+  container.innerHTML = `<p class="section-title">Producer decision <span>${esc(versionName(currentVersion))}</span></p>
+    <p><b>${esc(current?.status || "Awaiting review")}</b>${current ? ` · ${esc(current.reviewer)}` : ""}</p>
+    ${current ? `<p class="decision-text">${esc(current.notes)}</p>${current.conditions ? `<p class="decision-text"><b>Conditions:</b> ${esc(current.conditions)}</p>` : ""}` : previous ? `<p class="decision-stale">${esc(previous.status)} applies to ${esc(versionName(previous.version))}, not this version.</p>` : ""}
+    <details id="decision-editor"><summary>Record producer decision</summary>
+      <form id="decision-form">
+        <label class="field"><span>Reviewed version</span><select name="version">${workspace.versions.map((v) => `<option value="${v.number}">${v.number} · ${esc(v.label)}</option>`).join("")}</select></label>
+        <label class="field"><span>Decision</span><select name="status" required>
+          <option value="">Select decision</option><option>Approved</option><option>Hold</option><option>Rework</option><option>Passed</option>
+        </select></label>
+        <label class="field"><span>Reviewer name</span><input name="reviewer" required maxlength="120" /></label>
+        <label class="field"><span>Decision notes</span><textarea name="notes" required maxlength="5000" rows="3"></textarea></label>
+        <label class="field"><span>Conditions</span><textarea name="conditions" maxlength="5000" rows="2" placeholder="Budget cap, attachments, financing requirements…"></textarea></label>
+        <button class="btn btn-primary" type="submit">Save producer decision</button>
+      </form>
+    </details>
+    ${workspace.decisions.length ? `<details class="decision-history"><summary>Decision history (${workspace.decisions.length})</summary><ul class="drivers">${workspace.decisions.map(entry).join("")}</ul></details>` : ""}`;
+  $("#decision-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    const button = form.querySelector('button[type="submit"]');
+    button.disabled = true;
+    try {
+      await getJSON(`/api/projects/${encodeURIComponent(workspace.id)}/decisions`, {
+        method: "POST", headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({version: Number(data.get("version")), status: data.get("status"),
+          reviewer: String(data.get("reviewer")).trim(), notes: String(data.get("notes")).trim(),
+          conditions: String(data.get("conditions")).trim()})});
+      await loadSlate();
+      toast("Producer decision saved.");
+    } catch (error) { toast(error.message); }
+    finally { button.disabled = false; }
+  });
+}
+
 async function reviseProject(report) {
   if (state.run) { toast("An analysis is already running."); return; }
   try {
-    const workspace = report.workspace_id
-      ? await getJSON(`/api/projects/${encodeURIComponent(report.workspace_id)}`)
-      : await getJSON("/api/projects", {method: "POST", headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({name: report.project_name, report_id: report.id})});
+    const workspace = await ensureWorkspace(report);
     revisionRequest = {...workspace.versions[0].request, workspace_id: workspace.id};
     pitchForm.reset();
     for (const [name, value] of Object.entries(revisionRequest)) {

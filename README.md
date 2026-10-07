@@ -47,6 +47,8 @@ Demo video: [demo.mp4](demo.mp4)
 - **Slate dashboard:** Review saved projects as a portfolio with budget exposure, recommendation mix, risk mix, and ranked candidates.
 - **Studio Lot view:** An isometric, strategy-game style map of the slate at `/lot`. Each saved report is a soundstage coloured by verdict, the six agents are trailers that light up during a live run, and the Greenlight Office shows the decision.
 - **Project workspaces:** Named analysis versions, reanalysis with preserved settings, and input/ROI/risk/verdict comparisons. Studio Lot counts each linked project once using its latest version.
+- **Producer decisions:** Record Approved, Hold, Rework, or Passed against a reviewed version, with notes, conditions, and decision history separate from the AI recommendation.
+- **Slate budget planner:** Select latest project versions under a funding cap, compare exposure-weighted scenarios and genre concentration, generate a ranked budget-fit suggestion, and download a JSON plan.
 - **CopilotKit decision room:** Optional React + CopilotKit UI with shared agent context, generative UI surfaces, frontend tools, and a local or LLM-backed Copilot runtime.
 
 ## Demo Screenshots

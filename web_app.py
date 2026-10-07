@@ -22,6 +22,7 @@ from utils.project_workspaces import ProjectWorkspaces, compare_versions
 from utils.pitch_package import build_pitch_package
 from utils.sample_data import SAMPLE_PROJECT
 from utils.slate_dashboard import build_slate_dashboard
+from utils.slate_planner import planner_candidates, build_plan
 from utils.source_material import build_source_material_payload
 from utils.studio_brief import build_studio_brief, build_studio_brief_html
 
@@ -143,6 +144,31 @@ async def index():
 async def studio_lot():
     """Serve the isometric studio-lot view of the slate."""
     return FileResponse(WEB_DIR / "lot.html")
+
+
+@app.get("/slate-planner")
+async def slate_planner_page():
+    return FileResponse(WEB_DIR / "slate-planner.html")
+
+
+class SlatePlanRequest(BaseModel):
+    funding_cap: int = Field(..., gt=0)
+    selected_ids: list[str] = Field(default_factory=list, max_length=500)
+    suggest: bool = False
+
+
+@app.get("/api/slate-planner")
+async def slate_planner_projects():
+    return {"projects": planner_candidates(workspaces, OUTPUT_DIR)}
+
+
+@app.post("/api/slate-planner/plan")
+async def slate_budget_plan(request: SlatePlanRequest):
+    try:
+        return build_plan(planner_candidates(workspaces, OUTPUT_DIR), request.funding_cap,
+                          request.selected_ids, request.suggest)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 
 @app.get("/api/sample")
@@ -409,6 +435,26 @@ async def project_comparison(project_id: str, before: int = Query(..., ge=1), af
         return compare_versions(workspaces.get(project_id), OUTPUT_DIR, before, after)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Project or report not found")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+class ProducerDecisionRequest(BaseModel):
+    version: int = Field(..., ge=1)
+    status: str = Field(..., pattern="^(Approved|Hold|Rework|Passed)$")
+    reviewer: str = Field(..., min_length=1, max_length=120)
+    notes: str = Field(..., min_length=1, max_length=5000)
+    conditions: str = Field("", max_length=5000)
+
+
+@app.post("/api/projects/{project_id}/decisions", status_code=201)
+async def record_producer_decision(project_id: str, request: ProducerDecisionRequest):
+    """Append a human decision without modifying the AI analysis or prior decisions."""
+    try:
+        return workspaces.record_decision(project_id, request.version, request.status,
+                                          request.reviewer, request.notes, request.conditions)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Project not found")
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 

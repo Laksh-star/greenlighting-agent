@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Slate Budget Planner</title><link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/static/slate-planner.css">
+</head>
+<body>
+  <header><a href="/lot">Studio Lot</a><strong>Slate Budget Planner</strong><a href="/">Classic view</a></header>
+  <main>
+    <div class="toolbar">
+      <label>Funding cap (USD)<input id="funding-cap" type="number" min="1" step="1000000" value="50000000"></label>
+      <button id="suggest">Suggest budget-fit slate</button><button id="clear">Clear selection</button>
+      <button id="download" disabled>Download plan JSON</button>
+    </div>
+    <p id="status" role="status">Loading saved projects...</p>
+    <section aria-label="Plan summary" id="summary"></section>
+    <section class="planning-grid">
+      <div>
+        <div class="list-heading"><h1>Projects</h1><input id="filter" type="search" placeholder="Search projects" aria-label="Search projects"></div>
+        <div class="table-scroll"><table><thead><tr><th>Select</th><th>Project / Version</th><th>Exposure</th><th>Base ROI</th><th>Risk / 10</th><th>AI</th><th>Producer</th></tr></thead><tbody id="projects"></tbody></table></div>
+      </div>
+      <aside>
+        <h2>Financial scenarios</h2><div id="scenarios"></div>
+        <h2>Genre exposure</h2><div id="mix"></div>
+        <h2>Review flags</h2><ul id="warnings"></ul>
+        <p class="disclaimer">Independent project estimates; no correlation or release-timing adjustments. Modeled profit is not a cash-flow forecast.</p>
+      </aside>
+    </section>
+  </main>
+  <script type="module" src="/static/slate-planner.js"></script>
+</body>
+</html>

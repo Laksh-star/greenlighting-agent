@@ -131,3 +131,94 @@ class WorkspaceTests(unittest.TestCase):
             second = cli._save_report(results)
         self.assertNotEqual(first, second)
         self.assertTrue(first.exists() and second.exists())
+
+    def test_producer_decision_persists_without_changing_ai_report(self):
+        self.report("first", recommendation="NO-GO")
+        original = (self.reports / "first.json").read_text()
+        project = self.store.create("Lunar", "first", {})
+        response = self.client.post(f"/api/projects/{project}/decisions", json={
+            "version": 1, "status": "Approved", "reviewer": "Producer",
+            "notes": "Proceed with attached financing", "conditions": "Budget below $12M"})
+        self.assertEqual(response.status_code, 201)
+        reopened = ProjectWorkspaces(self.store.database).get(project)
+        self.assertEqual(reopened["decisions"][0]["conditions"], "Budget below $12M")
+        self.assertTrue(reopened["decisions"][0]["created_at"].endswith("Z"))
+        self.assertEqual((self.reports / "first.json").read_text(), original)
+        row = self.store.slate(self.reports)[0]
+        self.assertEqual(row["human_decision"]["status"], "Approved")
+        self.assertEqual(row["recommendation"], "NO-GO")
+
+    def test_producer_decisions_are_append_only(self):
+        project = self.store.create("Lunar", "first", {})
+        first = self.store.record_decision(project, 1, "Hold", "A", "Await financing")
+        second = self.store.record_decision(project, 1, "Approved", "B", "Financing confirmed")
+        decisions = self.store.get(project)["decisions"]
+        self.assertEqual([d["id"] for d in decisions], [second["id"], first["id"]])
+        self.assertEqual(decisions[1]["status"], "Hold")
+
+    def test_new_version_does_not_inherit_approval(self):
+        self.report("first")
+        self.report("second")
+        project = self.store.create("Lunar", "first", {})
+        self.store.record_decision(project, 1, "Approved", "A", "Approved original")
+        self.store.add_version(project, "second", "Revised budget", {})
+        row = self.store.slate(self.reports)[0]
+        self.assertIsNone(row["human_decision"])
+        self.assertEqual(row["previous_decision"]["version"], 1)
+
+    def test_old_version_decision_does_not_override_current_review(self):
+        self.report("first")
+        self.report("second")
+        project = self.store.create("Lunar", "first", {})
+        self.store.add_version(project, "second", "Revised", {})
+        self.store.record_decision(project, 2, "Rework", "A", "Revise treatment")
+        self.store.record_decision(project, 1, "Approved", "B", "Original still approved")
+        self.assertEqual(self.store.slate(self.reports)[0]["human_decision"]["status"], "Rework")
+
+    def test_decision_rejects_foreign_version_and_missing_project(self):
+        project = self.store.create("Lunar", "first", {})
+        self.store.create("Other", "other", {})
+        body = {"version": 2, "status": "Hold", "reviewer": "A", "notes": "Review"}
+        self.assertEqual(self.client.post(f"/api/projects/{project}/decisions", json=body).status_code, 400)
+        self.assertEqual(self.client.post("/api/projects/missing/decisions", json=body).status_code, 404)
+        self.assertEqual(self.store.get(project)["decisions"], [])
+
+    def test_decision_rejects_invalid_status_and_blank_fields(self):
+        project = self.store.create("Lunar", "first", {})
+        base = {"version": 1, "status": "Hold", "reviewer": "A", "notes": "Review"}
+        for update, code in [({"status": "GO"}, 422), ({"reviewer": " "}, 400),
+                             ({"notes": "\n "}, 400), ({"notes": "x" * 5001}, 422)]:
+            with self.subTest(update=update):
+                response = self.client.post(f"/api/projects/{project}/decisions", json={**base, **update})
+                self.assertEqual(response.status_code, code)
+        self.assertEqual(self.store.get(project)["decisions"], [])
+
+    def test_decision_table_migrates_existing_workspace_database(self):
+        import sqlite3
+        project = self.store.create("Lunar", "first", {})
+        with sqlite3.connect(self.store.database) as db:
+            db.execute("DROP TABLE decisions")
+        self.store.record_decision(project, 1, "Passed", "Producer", "Not a slate fit")
+        workspace = self.store.get(project)
+        self.assertEqual(len(workspace["versions"]), 1)
+        self.assertEqual(workspace["decisions"][0]["status"], "Passed")
+
+    def test_planner_endpoints_use_latest_version_only(self):
+        self.report("first", 100, 20)
+        self.report("second", 80, 30)
+        project = self.store.create("Lunar", "first", {})
+        self.store.add_version(project, "second", "Lean", {})
+        candidates = self.client.get("/api/slate-planner").json()["projects"]
+        self.assertEqual([p["id"] for p in candidates], ["second"])
+        plan = self.client.post("/api/slate-planner/plan", json={"funding_cap": 200, "selected_ids": ["second"]})
+        self.assertEqual(plan.status_code, 200)
+        self.assertEqual(plan.json()["total_exposure"], 120)
+        self.assertEqual(plan.json()["scenarios"][0]["modeled_profit"], None)
+        stale = self.client.post("/api/slate-planner/plan", json={"funding_cap": 200, "selected_ids": ["first"]})
+        self.assertEqual(stale.status_code, 400)
+
+    def test_planner_page_and_assets(self):
+        self.assertEqual(self.client.get("/slate-planner").status_code, 200)
+        for asset in ("slate-planner.js", "slate-planner.css"):
+            self.assertEqual(self.client.get(f"/static/{asset}").status_code, 200)
+        self.assertEqual(self.client.post("/api/slate-planner/plan", json={"funding_cap": 0}).status_code, 422)

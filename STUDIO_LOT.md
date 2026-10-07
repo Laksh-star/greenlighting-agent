@@ -1,5 +1,21 @@
 # Studio Lot View
 
+## Human Review
+
+Producer decisions are persisted in the local workspace SQLite database with a
+foreign key to the exact project/version. Records are append-only; corrections
+are new decisions, preserving the previous entry. A fresh analysis version does
+not inherit approval. AI report payloads and recommendations remain unchanged.
+
+`POST /api/projects/{id}/decisions` accepts `version`, `status` (Approved, Hold,
+Rework, Passed), `reviewer`, `notes`, and optional `conditions`. The workspace
+detail includes the decision history. Project summaries include `human_decision`
+for the current version and `previous_decision` for historical context. The schema
+is created additively for existing workspace databases. Decisions are local,
+unauthenticated records; conditions do not trigger enforcement or spending.
+
+## Overview
+
 The Studio Lot is an isometric, strategy-game style view of the greenlight slate. It is a second front end over the same local API as the classic view; it adds no agent logic of its own.
 
 ![Studio Lot view](docs/screenshots/studio-lot.png)

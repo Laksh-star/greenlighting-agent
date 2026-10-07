@@ -1122,3 +1122,8 @@ svg {
 .version-table th, .version-table td { text-align: left; padding: 8px; border-bottom: 1px solid #d4d9d6; }
 #versions { margin-top: 20px; }
 #versions .drivers { overflow-wrap: anywhere; }
+.decision-text { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
+.decision-stale { color: #835300; font-size: 13px; }
+#producer-decision { padding-bottom: 16px; }
+#producer-decision summary { cursor: pointer; font-size: 13px; padding: 8px 0; }
+.decision-history { margin-top: 12px; }
