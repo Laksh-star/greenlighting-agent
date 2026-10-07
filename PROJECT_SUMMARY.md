@@ -17,6 +17,9 @@ Recent studio workflow modules:
 - `utils/slate_planner.py` and `web/slate-planner.*`: funding-cap selection,
   weighted scenarios, genre exposure, greedy suggestions and JSON plan export.
 - `web/project-tools.js`: Studio Lot evidence, stress and milestone controls.
+- `utils/production_tracking.py` and `web/production-tools.js`: cumulative USD
+  actuals, CSV imports, exact-version forecast comparisons, and manual production
+  constraints with append-only history in the workspace database.
 
 Reports, treatments, private data and workspace histories remain local. No MCP
 server, authenticated team review, automated milestone validation, cash-flow

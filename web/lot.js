@@ -3,6 +3,7 @@
 
 import { createLot } from "/static/lot-scene.js";
 import { renderMilestones, renderEvidence, renderStress } from "/static/project-tools.js";
+import { renderProduction } from "/static/production-tools.js";
 
 const AGENTS = [
   { key: "market_research", short: "Market", name: "Market research" },
@@ -371,6 +372,8 @@ function renderDetail(report, payload) {
       <button type="button" class="btn btn-ghost" data-panel="development">Milestones</button>
       <button type="button" class="btn btn-ghost" data-panel="stress">Stress test</button>
       <button type="button" class="btn btn-ghost" data-panel="evidence">Evidence</button>
+      <button type="button" class="btn btn-ghost" data-panel="actuals">Actuals</button>
+      <button type="button" class="btn btn-ghost" data-panel="constraints">Production</button>
     </nav>`}
     <div class="tiles">
       <div class="tile">
@@ -443,6 +446,8 @@ function renderDetail(report, payload) {
            <section id="development" aria-label="Development milestones"><button class="btn btn-ghost" id="milestone-start">Track development milestones</button></section>
            <section id="stress" aria-label="Financial stress testing"></section>
            <section id="evidence" aria-label="Evidence provenance"></section>
+           <section id="actuals" aria-label="Actuals tracking"></section>
+           <section id="constraints" aria-label="Production constraints"></section>
            <section id="versions" aria-label="Analysis versions"></section>`
     }`;
   if (!report.is_sample) {
@@ -451,6 +456,11 @@ function renderDetail(report, payload) {
     for (const button of panel.querySelectorAll('[data-panel]')) button.addEventListener('click', async ()=>{
       try {
         const id = button.dataset.panel;
+        if ((id === 'actuals' || id === 'constraints') && !$('#actuals details')) {
+          const workspace = await ensureWorkspace(report);
+          if (state.selectedId !== report.id) return;
+          await renderProduction($('#actuals'), $('#constraints'), workspace, helpers);
+        }
         if (id === 'development' && !report.workspace_id) {
           const workspace = await ensureWorkspace(report);
           if (state.selectedId !== report.id) return;
@@ -488,6 +498,7 @@ async function renderVersions(report) {
   if (state.selectedId !== report.id) return;
   renderProducerDecision(report, workspace);
   renderMilestones($("#development"), workspace, {esc, json:getJSON, refresh:loadSlate, toast});
+  renderProduction($('#actuals'), $('#constraints'), workspace, {esc, json:getJSON, refresh:loadSlate, toast}).catch(error=>toast(error.message));
   const container = $("#versions");
   if (!container) return;
   container.innerHTML = `<p class="section-title">Analysis versions <span>${workspace.versions.length}</span></p>

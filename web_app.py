@@ -4,8 +4,9 @@ import asyncio
 import json
 import uuid
 from datetime import datetime, date
+from decimal import Decimal
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Annotated
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, StreamingResponse
@@ -25,6 +26,8 @@ from utils.slate_dashboard import build_slate_dashboard
 from utils.slate_planner import planner_candidates, build_plan
 from utils.evidence_provenance import build_provenance
 from utils.financial_stress import stress_report
+from utils.production_tracking import (ACTUALS_CSV, normalize_snapshot, parse_actuals_csv,
+                                       save_actuals, save_constraint, production_detail)
 from utils.source_material import build_source_material_payload
 from utils.studio_brief import build_studio_brief, build_studio_brief_html
 
@@ -473,6 +476,86 @@ class StressRequest(BaseModel):
     revenue_multiplier: float = Field(1, ge=0, le=3)
     overrun_pct: float = Field(0, ge=0, le=100)
     marketing_spend: Optional[int] = Field(None, ge=0)
+
+
+Money = Annotated[Decimal, Field(ge=0, max_digits=15, decimal_places=2)]
+
+
+class ActualsRequest(BaseModel):
+    version: int = Field(..., ge=1)
+    as_of: date
+    phase: str = Field("Interim", pattern="^(Interim|Final)$")
+    production_spend: Optional[Money] = None
+    marketing_spend: Optional[Money] = None
+    gross_revenue: Optional[Money] = None
+    studio_receipts: Optional[Money] = None
+    notes: str = Field(..., min_length=1, max_length=5000)
+
+
+class ActualsCSVRequest(BaseModel):
+    csv_text: str = Field(..., min_length=1, max_length=200000)
+
+
+class ConstraintRequest(BaseModel):
+    version: int = Field(..., ge=1)
+    constraint_id: str = Field("", max_length=64)
+    category: str = Field(..., pattern="^(Cast/Talent|Location|Availability|VFX|Schedule)$")
+    title: str = Field(..., min_length=1, max_length=160)
+    status: str = Field(..., pattern="^(Proposed|Pending|Confirmed|Blocked|Released)$")
+    owner: str = Field("", max_length=120)
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    notes: str = Field(..., min_length=1, max_length=5000)
+
+
+@app.get("/api/actuals/template")
+async def actuals_template():
+    return PlainTextResponse(ACTUALS_CSV, media_type="text/csv", headers={"Content-Disposition": 'attachment; filename="actuals-template.csv"'})
+
+
+@app.get("/api/projects/{project_id}/production")
+async def project_production(project_id: str, snapshot_id: Optional[int] = Query(None, ge=1)):
+    try:
+        return production_detail(workspaces, project_id, OUTPUT_DIR, snapshot_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Project or referenced report not found")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.post("/api/projects/{project_id}/actuals", status_code=201)
+async def record_actuals(project_id: str, request: ActualsRequest):
+    try:
+        data = request.model_dump()
+        data["as_of"] = request.as_of.isoformat()
+        return save_actuals(workspaces, project_id, [normalize_snapshot(data)])
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Project not found")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.post("/api/projects/{project_id}/actuals/import", status_code=201)
+async def import_actuals(project_id: str, request: ActualsCSVRequest):
+    try:
+        return save_actuals(workspaces, project_id, parse_actuals_csv(request.csv_text), "csv")
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Project not found")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.post("/api/projects/{project_id}/constraints", status_code=201)
+async def record_constraint(project_id: str, request: ConstraintRequest):
+    try:
+        data = request.model_dump()
+        data["start_date"] = request.start_date.isoformat() if request.start_date else ""
+        data["end_date"] = request.end_date.isoformat() if request.end_date else ""
+        return save_constraint(workspaces, project_id, data)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Project not found")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 
 @app.post("/api/reports/{report_id}/stress")

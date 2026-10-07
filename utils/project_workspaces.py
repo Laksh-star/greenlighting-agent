@@ -49,6 +49,26 @@ class ProjectWorkspaces:
                 notes TEXT NOT NULL, created_at TEXT NOT NULL,
                 FOREIGN KEY (project_id, version) REFERENCES versions(project_id, number)
             );
+            CREATE TABLE IF NOT EXISTS actual_snapshots (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id TEXT NOT NULL, version INTEGER NOT NULL,
+                as_of TEXT NOT NULL, phase TEXT NOT NULL,
+                production_spend INTEGER, marketing_spend INTEGER,
+                gross_revenue INTEGER, studio_receipts INTEGER,
+                notes TEXT NOT NULL, source TEXT NOT NULL, fingerprint TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                UNIQUE(project_id, fingerprint),
+                FOREIGN KEY (project_id, version) REFERENCES versions(project_id, number)
+            );
+            CREATE TABLE IF NOT EXISTS constraint_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id TEXT NOT NULL, version INTEGER NOT NULL,
+                constraint_id TEXT NOT NULL, category TEXT NOT NULL,
+                title TEXT NOT NULL, status TEXT NOT NULL, owner TEXT NOT NULL,
+                start_date TEXT NOT NULL, end_date TEXT NOT NULL,
+                notes TEXT NOT NULL, created_at TEXT NOT NULL,
+                FOREIGN KEY (project_id, version) REFERENCES versions(project_id, number)
+            );
         """)
         try:
             with connection:

@@ -212,3 +212,23 @@ API: `GET /api/projects`, `POST /api/projects` (adopt a saved report),
 `GET /api/projects/{id}`, and
 `GET /api/projects/{id}/compare?before=1&after=2`.
 `POST /api/analyze` accepts `workspace_id`, `project_name`, and `version_label`.
+
+## Actuals And Production Tracking
+
+Soundstage detail offers **Actuals** and **Production** buttons. These use
+`web/production-tools.js` and `utils/production_tracking.py`, with persistent
+records in the existing local workspace database. A standalone report is adopted
+into a workspace when tracking is explicitly opened.
+
+Actuals support manual cumulative USD snapshots, template-based CSV import,
+snapshot history and comparisons against the referenced analysis version.
+Unknown amounts stay unknown, exact duplicates are skipped and corrections
+append. The newest as-of date (then newest record) is the default comparison;
+snapshots are never summed. Cash receipts are separate from gross revenue and
+streaming lifetime value. Interim spend is not final savings.
+
+Production constraints retain title, category, status, owner/contact, date
+window, notes and the reference analysis version. Current blockers and their
+full update history are displayed separately from AI risk and producer approval.
+No booking verification, scheduling-conflict inference or external AI calls are
+performed. See [USERGUIDE.md](USERGUIDE.md#actuals-and-production-constraints).

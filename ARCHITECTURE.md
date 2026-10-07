@@ -21,11 +21,14 @@ flowchart TD
     DB --> Versions["Named versions + reanalysis input snapshots"]
     DB --> Decisions["Version-specific human decision history"]
     DB --> Milestones["Project development milestone history"]
+    DB --> Production["Cumulative actuals + production constraint history"]
+    Files --> Production
     Versions --> Slate["Latest-version slate and budget planner"]
     Provenance --> ReviewUI["Studio Lot review controls"]
     Stress --> ReviewUI
     Decisions --> ReviewUI
     Milestones --> ReviewUI
+    Production --> ReviewUI
 ```
 
 | Module | Responsibility |
@@ -35,6 +38,8 @@ flowchart TD
 | `utils/financial_stress.py` | Saved demand/value stress, fixed license value, changed cost exposure and break-even, existing risk-tolerance thresholds |
 | `utils/slate_planner.py` | Latest-version selection, cap/coverage/concentration checks, ranked greedy suggestions and exposure-weighted scenarios |
 | `web/project-tools.js` | Studio Lot milestone, provenance and stress controls |
+| `utils/production_tracking.py` | Integer-cent cumulative USD snapshots, atomic CSV imports, exact-version forecast comparison and append-only manual constraint events |
+| `web/production-tools.js` | Studio Lot actuals comparison, snapshot/import forms and constraint history |
 | `web/slate-planner.*` | Local portfolio planning and JSON download |
 
 ### Boundaries
@@ -66,6 +71,19 @@ flowchart TD
   optimal portfolio solutions; producer conditions are not enforced.
 - This is a local unauthenticated demo. Keep private datasets and all generated
   outputs out of Git, and back up `outputs/reports/` with `outputs/projects/`.
+- Actuals are cumulative snapshots, not transactions to sum. SQLite retains
+  amounts as integer USD cents; blank means unknown, not zero. Exact normalized
+  duplicates are skipped, corrections append, and the default comparison uses
+  newest as-of date then newest record. CSV validation precedes one transaction.
+  Comparisons load the exact referenced version's report without changing it.
+  Interim totals are not final savings. Cash ROI requires known production and
+  marketing spend plus studio receipts; gross revenue cannot replace receipts.
+  Streaming subscriber LTV is excluded from cash forecasts. No FX conversion,
+  accounting reconciliation or cash-flow timing model is provided.
+- Constraints are manual project-wide records with a reference version on every
+  update. Blocked status counts separately from the AI risk score and producer
+  approval. There is no automated booking verification, conflict detection or
+  scheduling engine. Updating or releasing a constraint preserves its history.
 
 ### Added API Contracts
 
@@ -76,6 +94,11 @@ flowchart TD
 | `GET /api/projects/{id}/compare` | Compare two numbered versions |
 | `POST /api/projects/{id}/decisions` | Append a reviewed-version producer decision |
 | `POST /api/projects/{id}/milestones` | Append a development update with owner, date, notes and reference version |
+| `GET /api/projects/{id}/production` | Actual snapshots, chosen/latest snapshot comparison and current constraints/history; optional `snapshot_id` |
+| `POST /api/projects/{id}/actuals` | Append normalized cumulative USD snapshot, skipping exact duplicates |
+| `POST /api/projects/{id}/actuals/import` | Validate up to 200 CSV snapshots and import atomically |
+| `GET /api/actuals/template` | Download actuals CSV template |
+| `POST /api/projects/{id}/constraints` | Add/update a constraint by appending an event; supplied IDs must belong to the project |
 | `GET /api/reports/{id}/evidence` | Stored provenance or conservative legacy reconstruction |
 | `POST /api/reports/{id}/stress` | Stateless deterministic financial stress calculation |
 | `GET /api/slate-planner` | Current candidate analyses |
