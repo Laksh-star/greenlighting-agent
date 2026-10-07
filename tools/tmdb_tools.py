@@ -3,6 +3,7 @@ TMDB (The Movie Database) API tools for fetching movie and TV show data.
 """
 
 import requests
+from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
 from config import TMDB_API_KEY, TMDB_BASE_URL, validate_config
 import time
@@ -84,7 +85,8 @@ class TMDBClient:
                     "roi": 0.0,
                     "rating": 0,
                     "popularity": 0,
-                    "similar_titles": []
+                    "similar_titles": [],
+                    "source": "input only",
                 })
                 continue
 
@@ -95,6 +97,9 @@ class TMDBClient:
             revenue = details.get("revenue", 0) or 0
             enriched.append({
                 "title": details.get("title", movie.get("title", title)),
+                "source": "TMDB",
+                "source_url": f"https://www.themoviedb.org/movie/{movie['id']}",
+                "retrieved_at": datetime.now(timezone.utc).isoformat(),
                 "year": (details.get("release_date") or "")[:4] or "n/a",
                 "budget": budget,
                 "revenue": revenue,

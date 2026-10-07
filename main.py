@@ -30,6 +30,7 @@ from utils.batch import (
 from utils.report_quality import assert_report_quality
 from utils.run_ledger import save_run_ledger
 from utils.source_material import load_source_material
+from utils.evidence_provenance import provenance_from_results
 
 
 class GreenlightingCLI:
@@ -210,15 +211,30 @@ class GreenlightingCLI:
         if decision_drivers:
             lines.append("### Decision Drivers")
             lines.append("")
+            for driver in decision_drivers[:3]:
+                lines.append(f"- {driver}")
+            lines.append("")
 
         if source_material:
             lines.append("### Source Material Snapshot")
             lines.append("")
             lines.extend(self._format_source_material_snapshot(source_material))
             lines.append("")
-            for driver in decision_drivers[:3]:
-                lines.append(f"- {driver}")
             lines.append("")
+
+        provenance = provenance_from_results(results)
+        lines.extend(["### Evidence Provenance", "", "| Evidence | Source | Retrieved (UTC) |", "| --- | --- | --- |"])
+        for item in provenance["evidence"]:
+            description = str(item["description"]).replace("|", "\\|").replace("\n", " ")
+            if item.get("url"):
+                description = f"[{description}]({item['url']})"
+            lines.append(f"| {description} | {item['source']} | {item.get('retrieved_at') or 'Not recorded / not applicable'} |")
+        lines.append("")
+        for driver in provenance["decision_drivers"]:
+            lines.append(f"- {driver['text']} — {driver['status']} ({', '.join(driver['evidence_ids']) or 'no evidence link'}).")
+        for warning in provenance["warnings"]:
+            lines.append(f"- Evidence warning: {warning}")
+        lines.append("")
 
         comparable_evidence = self._get_comparable_evidence(results)
         if comparable_evidence:

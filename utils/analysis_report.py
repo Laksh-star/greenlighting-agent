@@ -4,6 +4,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any
 import json
+from utils.evidence_provenance import provenance_from_results
 
 
 def _agent_metadata(results: Dict[str, Any], agent_name: str) -> Dict[str, Any]:
@@ -34,6 +35,7 @@ def build_analysis_payload(
 
     return {
         "schema_version": "1.0",
+        "evidence_provenance": provenance_from_results(results),
         "generated_at": datetime.utcnow().isoformat(),
         "project": results.get("requested_project_data", results.get("project_data", {})),
         "source_material": _source_material_summary(

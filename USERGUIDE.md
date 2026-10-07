@@ -372,6 +372,30 @@ http://127.0.0.1:8001
 - Use batch mode to compare multiple project ideas quickly.
 ## Project Versions In Studio Lot
 
+### Evidence, Stress And Development
+
+Select a saved project at `/lot`. Below its report actions, you will find:
+
+- **Evidence provenance:** source labels, dataset identifiers, retained retrieval
+  dates, missing financial evidence warnings and driver support. Unknown older
+  sources/dates remain unknown. Unsupported narrative claims are not citations.
+- **Financial stress test:** adjust revenue/value multiplier, production overrun
+  and marketing spend, then click Calculate stress case. No AI or TMDB calls are
+  made. The ROI threshold signal is not a revised recommendation or approval.
+  Forecast demand stays fixed when production costs rise; license value stays
+  fixed. Streaming results may represent subscriber value, not cash receipts.
+- **Development milestones:** record Treatment, Script, Packaging, Financing or
+  Production readiness as Not started, In progress, Blocked or Complete, with
+  an owner, optional due date and required notes. Updates retain history and the
+  reference version. Older standalone reports are linked to a workspace first.
+
+Milestones are project-level manual records, not proof of financing or production
+readiness; new analysis versions do not automatically reset them. Owner names
+are not authenticated and due dates do not create reminders. Stress cases are
+temporary calculations and do not update saved versions. New Markdown/JSON
+reports include provenance automatically; older reports are inspected without
+rewriting their files.
+
 ### Slate Budget Planner
 
 Open `/slate-planner` (or **Budget planner** in the Studio Lot header). Set a

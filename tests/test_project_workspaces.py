@@ -222,3 +222,55 @@ class WorkspaceTests(unittest.TestCase):
         for asset in ("slate-planner.js", "slate-planner.css"):
             self.assertEqual(self.client.get(f"/static/{asset}").status_code, 200)
         self.assertEqual(self.client.post("/api/slate-planner/plan", json={"funding_cap": 0}).status_code, 422)
+
+    def test_milestones_default_and_append_history(self):
+        project = self.store.create("Lunar", "first", {})
+        self.assertEqual(len(self.store.get(project)["milestones"]), 5)
+        for status in ("In progress", "Complete"):
+            response = self.client.post(f"/api/projects/{project}/milestones", json={
+                "version": 1, "milestone": "Script", "status": status, "owner": "Writer",
+                "due_date": "2026-11-01", "notes": "Recorded development update"})
+            self.assertEqual(response.status_code, 201)
+        workspace = self.store.get(project)
+        self.assertEqual(len(workspace["milestone_history"]), 2)
+        self.assertEqual(next(m for m in workspace["milestones"] if m["milestone"] == "Script")["status"], "Complete")
+        self.store.add_version(project, "second", "Revision", {})
+        self.assertEqual(self.store.get(project)["milestone_history"][0]["version"], 1)
+        self.assertEqual(self.store.get(project)["decisions"], [])
+
+    def test_milestone_validation_and_version_isolation(self):
+        project = self.store.create("Lunar", "first", {})
+        body = {"version": 1, "milestone": "Financing", "status": "Blocked", "notes": "Pending commitment"}
+        for update, status in [({"milestone": "Unknown"}, 422), ({"status": "Ready"}, 422),
+                               ({"due_date": "not-a-date"}, 422), ({"version": 2}, 400), ({"notes": " "}, 400)]:
+            with self.subTest(update=update):
+                self.assertEqual(self.client.post(f"/api/projects/{project}/milestones", json={**body, **update}).status_code, status)
+        self.assertEqual(self.client.post("/api/projects/missing/milestones", json=body).status_code, 404)
+        self.assertEqual(self.store.get(project)["milestone_history"], [])
+
+    def test_milestone_storage_survives_reopening(self):
+        project = self.store.create("Lunar", "first", {})
+        self.store.update_milestone(project, 1, "Treatment", "Complete", "Producer", "", "Treatment signed off")
+        reopened = ProjectWorkspaces(self.store.database).get(project)
+        self.assertEqual(reopened["milestones"][0]["status"], "Complete")
+
+    def test_evidence_endpoint_supports_legacy_without_mutating_report(self):
+        self.report("legacy")
+        original = (self.reports / "legacy.json").read_text()
+        response = self.client.get("/api/reports/legacy/evidence")
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["evidence"])
+        self.assertEqual((self.reports / "legacy.json").read_text(), original)
+        self.assertEqual(self.client.get("/api/reports/missing/evidence").status_code, 404)
+
+    def test_stress_endpoint_does_not_call_ai_or_change_report(self):
+        from test_evidence_stress import financial_payload
+        (self.reports / "stress.json").write_text(json.dumps(financial_payload()))
+        original = (self.reports / "stress.json").read_text()
+        with patch("web_app.GreenlightingCLI.analyze_project") as analyze, patch("web_app.tmdb_client.enrich_comparable_titles") as tmdb:
+            response = self.client.post("/api/reports/stress/stress", json={"revenue_multiplier": .5, "overrun_pct": 20})
+            self.assertEqual(response.status_code, 200)
+            analyze.assert_not_called()
+            tmdb.assert_not_called()
+        self.assertEqual((self.reports / "stress.json").read_text(), original)
+        self.assertEqual(self.client.post("/api/reports/stress/stress", json={"overrun_pct": 200}).status_code, 422)

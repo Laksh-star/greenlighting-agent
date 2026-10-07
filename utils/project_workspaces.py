@@ -4,10 +4,13 @@ import json
 import sqlite3
 import uuid
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, date
 from contextlib import contextmanager
 
 from utils.report_library import list_report_summaries, load_report_detail
+
+MILESTONES = ("Treatment", "Script", "Packaging", "Financing", "Production readiness")
+MILESTONE_STATUSES = ("Not started", "In progress", "Blocked", "Complete")
 
 
 class ProjectWorkspaces:
@@ -36,6 +39,14 @@ class ProjectWorkspaces:
                 status TEXT NOT NULL CHECK(status IN ('Approved', 'Hold', 'Rework', 'Passed')),
                 reviewer TEXT NOT NULL, notes TEXT NOT NULL, conditions TEXT NOT NULL,
                 created_at TEXT NOT NULL,
+                FOREIGN KEY (project_id, version) REFERENCES versions(project_id, number)
+            );
+            CREATE TABLE IF NOT EXISTS milestone_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id TEXT NOT NULL, version INTEGER NOT NULL,
+                milestone TEXT NOT NULL, status TEXT NOT NULL,
+                owner TEXT NOT NULL, due_date TEXT NOT NULL,
+                notes TEXT NOT NULL, created_at TEXT NOT NULL,
                 FOREIGN KEY (project_id, version) REFERENCES versions(project_id, number)
             );
         """)
@@ -67,9 +78,28 @@ class ProjectWorkspaces:
             versions = db.execute("SELECT * FROM versions WHERE project_id=? ORDER BY number DESC", (project_id,)).fetchall()
             decisions = [dict(d) for d in db.execute(
                 "SELECT * FROM decisions WHERE project_id=? ORDER BY id DESC", (project_id,))]
-        return {**dict(row), "decisions": decisions, "versions": [
+            events = [dict(e) for e in db.execute("SELECT * FROM milestone_events WHERE project_id=? ORDER BY id DESC", (project_id,))]
+        milestones = [next((e for e in events if e["milestone"] == name),
+                           {"milestone": name, "status": "Not started", "owner": "", "due_date": "", "notes": ""}) for name in MILESTONES]
+        return {**dict(row), "milestones": milestones, "milestone_history": events,
+                "decisions": decisions, "versions": [
             {"number": v["number"], "label": v["label"], "report_id": v["report_id"],
              "request": json.loads(v["request_json"])} for v in versions]}
+
+    def update_milestone(self, project_id, version, milestone, status, owner, due_date, notes):
+        self.get(project_id)
+        if milestone not in MILESTONES or status not in MILESTONE_STATUSES:
+            raise ValueError("Invalid milestone or status")
+        if not notes.strip() or len(notes) > 5000 or len(owner) > 120:
+            raise ValueError("Notes are required and text must remain within limits")
+        if due_date:
+            date.fromisoformat(due_date)
+        with self.connect() as db:
+            if not db.execute("SELECT 1 FROM versions WHERE project_id=? AND number=?", (project_id, version)).fetchone():
+                raise ValueError("Version does not belong to this project")
+            cursor = db.execute("INSERT INTO milestone_events (project_id, version, milestone, status, owner, due_date, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                                (project_id, version, milestone, status, owner.strip(), due_date, notes.strip(), datetime.utcnow().isoformat() + "Z"))
+            return dict(db.execute("SELECT * FROM milestone_events WHERE id=?", (cursor.lastrowid,)).fetchone())
 
     def record_decision(self, project_id, version, status, reviewer, notes, conditions=""):
         self.get(project_id)
@@ -118,6 +148,7 @@ class ProjectWorkspaces:
                 report = {**latest, "project_name": link["name"], "workspace_id": identity,
                           "version_count": len(versions), "version_label": versions[0]["label"],
                           "human_decision": next((d for d in workspace["decisions"] if d["version"] == versions[0]["number"]), None),
+                          "milestones_complete": sum(m["status"] == "Complete" for m in workspace["milestones"]),
                           "previous_decision": workspace["decisions"][0] if workspace["decisions"] else None}
             seen.add(identity)
             rows.append(report)

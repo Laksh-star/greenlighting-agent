@@ -2,6 +2,7 @@
 // Reads the same local API as the classic view; nothing here changes the agents.
 
 import { createLot } from "/static/lot-scene.js";
+import { renderMilestones, renderEvidence, renderStress } from "/static/project-tools.js";
 
 const AGENTS = [
   { key: "market_research", short: "Market", name: "Market research" },
@@ -366,6 +367,11 @@ function renderDetail(report, payload) {
       <p>Awaiting review</p>
       <button class="btn btn-ghost" id="decision-start">Record producer decision</button>
     </section>`}
+    ${report.is_sample ? "" : `<nav class="detail-tool-links" aria-label="Project review tools">
+      <button type="button" class="btn btn-ghost" data-panel="development">Milestones</button>
+      <button type="button" class="btn btn-ghost" data-panel="stress">Stress test</button>
+      <button type="button" class="btn btn-ghost" data-panel="evidence">Evidence</button>
+    </nav>`}
     <div class="tiles">
       <div class="tile">
         <p class="tile-label">Budget</p>
@@ -434,10 +440,37 @@ function renderDetail(report, payload) {
              <a class="btn btn-ghost" href="/api/reports/${encodeURIComponent(report.id)}/package">Pitch package</a>
              <button class="btn btn-primary" id="reanalyze">Reanalyze</button>
            </div>
+           <section id="development" aria-label="Development milestones"><button class="btn btn-ghost" id="milestone-start">Track development milestones</button></section>
+           <section id="stress" aria-label="Financial stress testing"></section>
+           <section id="evidence" aria-label="Evidence provenance"></section>
            <section id="versions" aria-label="Analysis versions"></section>`
     }`;
   if (!report.is_sample) {
     $("#reanalyze").addEventListener("click", () => reviseProject(report));
+    const helpers = {esc, json:getJSON, money, toast, refresh:loadSlate};
+    for (const button of panel.querySelectorAll('[data-panel]')) button.addEventListener('click', async ()=>{
+      try {
+        const id = button.dataset.panel;
+        if (id === 'development' && !report.workspace_id) {
+          const workspace = await ensureWorkspace(report);
+          if (state.selectedId !== report.id) return;
+          renderMilestones($('#development'), workspace, helpers);
+        }
+        const section = document.getElementById(id);
+        const details = section?.querySelector('details');
+        if (details) details.open = true;
+        section?.scrollIntoView({behavior:'smooth', block:'start'});
+      } catch(error) { toast(error.message); }
+    });
+    renderEvidence($("#evidence"), report.id, helpers).catch(error=>toast(error.message));
+    if (payload) renderStress($("#stress"), report.id, payload, helpers);
+    $("#milestone-start").addEventListener("click", async ()=>{
+      try {
+        const workspace = await ensureWorkspace(report);
+        if (state.selectedId !== report.id) return;
+        renderMilestones($("#development"), workspace, helpers);
+      } catch(error) { toast(error.message); }
+    });
     $("#decision-start").addEventListener("click", async () => {
       try {
         const workspace = await ensureWorkspace(report);
@@ -454,6 +487,7 @@ async function renderVersions(report) {
   const workspace = await getJSON(`/api/projects/${encodeURIComponent(report.workspace_id)}`);
   if (state.selectedId !== report.id) return;
   renderProducerDecision(report, workspace);
+  renderMilestones($("#development"), workspace, {esc, json:getJSON, refresh:loadSlate, toast});
   const container = $("#versions");
   if (!container) return;
   container.innerHTML = `<p class="section-title">Analysis versions <span>${workspace.versions.length}</span></p>

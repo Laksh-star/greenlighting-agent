@@ -1,5 +1,33 @@
 # 📦 Project Structure & Summary
 
+## Current Local Feature Snapshot
+
+The application now includes six analysis agents, direct Anthropic SDK calls,
+TMDB/private/demo evidence, deterministic financial models, CLI/batch analysis,
+FastAPI classic UI, Studio Lot, and an optional CopilotKit decision room.
+
+Recent studio workflow modules:
+
+- `utils/project_workspaces.py`: named versions, producer decision history and
+  project-level development milestones in ignored local SQLite storage.
+- `utils/evidence_provenance.py`: source labels, timestamps when retained,
+  assumption origin, warnings and conservative driver support links.
+- `utils/financial_stress.py`: saved-forecast stress testing without AI calls;
+  financial threshold signals do not replace AI or human decisions.
+- `utils/slate_planner.py` and `web/slate-planner.*`: funding-cap selection,
+  weighted scenarios, genre exposure, greedy suggestions and JSON plan export.
+- `web/project-tools.js`: Studio Lot evidence, stress and milestone controls.
+
+Reports, treatments, private data and workspace histories remain local. No MCP
+server, authenticated team review, automated milestone validation, cash-flow
+forecasting or optimal slate solver is claimed. See [ARCHITECTURE.md](ARCHITECTURE.md)
+for current storage, API and trust boundaries.
+
+## Earlier Project Summary (Historical)
+
+The original file listing, estimates and roadmap below are retained as earlier
+design notes, not current feature counts, benchmarks or deployment guarantees.
+
 ## Complete File Listing
 
 ```

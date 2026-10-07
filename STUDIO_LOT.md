@@ -16,6 +16,14 @@ unauthenticated records; conditions do not trigger enforcement or spending.
 
 ## Overview
 
+The project detail panel now includes milestone snapshots/history, evidence
+provenance, and financial stress controls from `web/project-tools.js`. These use
+the backend APIs documented in [ARCHITECTURE.md](ARCHITECTURE.md#added-api-contracts).
+Milestones are project-level recorded progress; producer decisions remain
+version-specific. Stress signals never change soundstage verdict colours.
+Stored and legacy evidence are displayed without inventing missing dates or
+links. Sample-only illustrative stages do not expose saved-project tools.
+
 The Studio Lot is an isometric, strategy-game style view of the greenlight slate. It is a second front end over the same local API as the classic view; it adds no agent logic of its own.
 
 ![Studio Lot view](docs/screenshots/studio-lot.png)
@@ -189,7 +197,8 @@ the verdict change.
 Each linked project occupies one soundstage using its latest completed version.
 Lot totals count projects once. The original report library and report-based
 dashboard remain available at `/` and retain every analysis. Legacy and CLI/batch
-reports remain standalone until **Reanalyze** links one into a workspace.
+reports remain standalone until Reanalyze, producer review or milestone tracking
+links one into a workspace.
 Failed analyses do not add a version. Existing Markdown/JSON files are untouched.
 
 Workspace metadata and full reanalysis inputs (including treatment text) are

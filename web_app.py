@@ -3,7 +3,7 @@
 import asyncio
 import json
 import uuid
-from datetime import datetime
+from datetime import datetime, date
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -23,6 +23,8 @@ from utils.pitch_package import build_pitch_package
 from utils.sample_data import SAMPLE_PROJECT
 from utils.slate_dashboard import build_slate_dashboard
 from utils.slate_planner import planner_candidates, build_plan
+from utils.evidence_provenance import build_provenance
+from utils.financial_stress import stress_report
 from utils.source_material import build_source_material_payload
 from utils.studio_brief import build_studio_brief, build_studio_brief_html
 
@@ -445,6 +447,54 @@ class ProducerDecisionRequest(BaseModel):
     reviewer: str = Field(..., min_length=1, max_length=120)
     notes: str = Field(..., min_length=1, max_length=5000)
     conditions: str = Field("", max_length=5000)
+
+
+class MilestoneRequest(BaseModel):
+    version: int = Field(..., ge=1)
+    milestone: str = Field(..., pattern="^(Treatment|Script|Packaging|Financing|Production readiness)$")
+    status: str = Field(..., pattern="^(Not started|In progress|Blocked|Complete)$")
+    owner: str = Field("", max_length=120)
+    due_date: Optional[date] = None
+    notes: str = Field(..., min_length=1, max_length=5000)
+
+
+@app.post("/api/projects/{project_id}/milestones", status_code=201)
+async def record_milestone(project_id: str, request: MilestoneRequest):
+    try:
+        return workspaces.update_milestone(project_id, request.version, request.milestone, request.status,
+                                           request.owner, request.due_date.isoformat() if request.due_date else "", request.notes)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Project not found")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+class StressRequest(BaseModel):
+    revenue_multiplier: float = Field(1, ge=0, le=3)
+    overrun_pct: float = Field(0, ge=0, le=100)
+    marketing_spend: Optional[int] = Field(None, ge=0)
+
+
+@app.post("/api/reports/{report_id}/stress")
+async def financial_stress_test(report_id: str, request: StressRequest):
+    try:
+        return stress_report(load_report_detail(OUTPUT_DIR, report_id)["payload"],
+                             request.revenue_multiplier, request.overrun_pct, request.marketing_spend)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Report not found")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.get("/api/reports/{report_id}/evidence")
+async def report_evidence(report_id: str):
+    try:
+        payload = load_report_detail(OUTPUT_DIR, report_id)["payload"]
+        return payload.get("evidence_provenance") or build_provenance(payload)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Report not found")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid report id")
 
 
 @app.post("/api/projects/{project_id}/decisions", status_code=201)
