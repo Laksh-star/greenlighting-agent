@@ -73,7 +73,8 @@ class PrivateDatasetStore:
         csv_path = self._dataset_csv_path(dataset_id)
         if not csv_path.exists():
             return []
-        return parse_private_dataset_csv(csv_path.read_text())
+        return [dict(row, dataset_id=dataset_id, retrieved_at=datetime.utcnow().isoformat() + "Z")
+                for row in parse_private_dataset_csv(csv_path.read_text())]
 
     def search(self, query: str, dataset_id: str = "", limit: int = 8) -> List[Dict[str, Any]]:
         rows = self._search_rows(dataset_id)
@@ -112,7 +113,7 @@ class PrivateDatasetStore:
             return self.load_dataset(dataset_id)
         rows = []
         for csv_path in sorted(self.base_dir.glob("*.csv")):
-            rows.extend(parse_private_dataset_csv(csv_path.read_text()))
+            rows.extend(self.load_dataset(csv_path.stem))
         return rows
 
     def _dataset_csv_path(self, dataset_id: str) -> Path:

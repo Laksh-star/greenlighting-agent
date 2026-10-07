@@ -37,6 +37,7 @@ class MarketResearchAgent(BaseAgent):
 
         if project_data.get("demo_mode"):
             comparable_evidence = comparable_evidence or self._demo_comparable_evidence(comparables)
+            comparable_evidence = [dict(row, source=row.get("source", "demo data")) for row in comparable_evidence]
             findings = self._demo_findings(genre, budget, comparable_evidence)
             return self.format_result(
                 findings=findings,

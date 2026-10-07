@@ -439,6 +439,13 @@ The no-go threshold is only triggered if VFX scope cannot be locked.
         self.assertEqual(dashboard["top_projects"][0]["project_name"], "Go Project")
         self.assertEqual(dashboard["watchlist"][0]["project_name"], "Watch Project")
 
+    def test_markdown_drivers_without_treatment_and_provenance(self):
+        results = self._quality_results()
+        report = GreenlightingCLI()._format_report(results)
+        self.assertIn("### Decision Drivers\n\n- Driver", report)
+        self.assertIn("### Evidence Provenance", report)
+        self.assertIn("unsupported interpretation", report)
+
     def _quality_results(self, recommendation="CONDITIONAL GO", analysis=None):
         return {
             "requested_project_data": {

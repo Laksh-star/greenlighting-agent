@@ -168,6 +168,12 @@ The agent will:
 
 ## Next Steps
 
+For studio workflows, open `http://127.0.0.1:8000/lot` and select a saved project.
+Review or reanalyze named versions, record producer decisions, track development
+milestones, inspect evidence provenance, and run deterministic financial stress
+cases. Open `http://127.0.0.1:8000/slate-planner` for funding-cap planning.
+See [USERGUIDE.md](USERGUIDE.md) for these controls and their limitations.
+
 1. Try analyzing different types of projects
 2. Compare recommendations for different budget levels
 3. Test how platform choice (theatrical vs streaming) affects analysis

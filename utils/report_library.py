@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 
-def list_report_summaries(report_dir: Path, limit: int = 25) -> List[Dict[str, Any]]:
+def list_report_summaries(report_dir: Path, limit: Optional[int] = 25) -> List[Dict[str, Any]]:
     """Return newest structured report summaries."""
     rows = []
     for json_path in sorted(report_dir.glob("*.json"), key=lambda path: path.stat().st_mtime, reverse=True):
@@ -17,7 +17,7 @@ def list_report_summaries(report_dir: Path, limit: int = 25) -> List[Dict[str, A
             continue
         markdown_path = json_path.with_suffix(".md")
         rows.append(_summary_from_payload(payload, json_path, markdown_path))
-        if len(rows) >= limit:
+        if limit is not None and len(rows) >= limit:
             break
     return rows
 

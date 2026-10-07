@@ -46,6 +46,12 @@ Demo video: [demo.mp4](demo.mp4)
 - **Pitch packages:** Download a zip bundle with the full report, JSON, brief, printable memo, assumptions, scenarios, and evidence.
 - **Slate dashboard:** Review saved projects as a portfolio with budget exposure, recommendation mix, risk mix, and ranked candidates.
 - **Studio Lot view:** An isometric, strategy-game style map of the slate at `/lot`. Each saved report is a soundstage coloured by verdict, the six agents are trailers that light up during a live run, and the Greenlight Office shows the decision.
+- **Project workspaces:** Named analysis versions, reanalysis with preserved settings, and input/ROI/risk/verdict comparisons. Studio Lot counts each linked project once using its latest version.
+- **Producer decisions:** Record Approved, Hold, Rework, or Passed against a reviewed version, with notes, conditions, and decision history separate from the AI recommendation.
+- **Slate budget planner:** Select latest project versions under a funding cap, compare exposure-weighted scenarios and genre concentration, generate a ranked budget-fit suggestion, and download a JSON plan.
+- **Evidence provenance:** Comparable sources and retrieval dates, explicit missing-data warnings, user-assumption/default labels, and conservative decision-driver support links in Markdown/JSON and Studio Lot.
+- **Financial stress testing:** Recalculate saved scenarios with revenue/value multipliers, production overruns, and marketing changes without AI calls. Financial signals remain separate from saved recommendations.
+- **Development milestones:** Track treatment, script, packaging, financing, and production readiness with owners, dates, notes, and persistent update history.
 - **CopilotKit decision room:** Optional React + CopilotKit UI with shared agent context, generative UI surfaces, frontend tools, and a local or LLM-backed Copilot runtime.
 
 ## Demo Screenshots
@@ -90,14 +96,14 @@ TMDB_API_KEY=your_tmdb_key_here
 
 With the web demo running, open `http://127.0.0.1:8000/lot`.
 
-- **Soundstages** are saved reports. Roof colour is the verdict (green GO, amber CONDITIONAL GO, red NO-GO) and building size follows budget. Click one to open its numbers, scenarios, agent confidence, and decision drivers.
+- **Soundstages** show each workspace's latest saved version (or a standalone report). Roof colour remains the AI verdict, not the producer decision. Click one to review versions, producer decisions, development milestones, evidence sources, and financial stress cases.
 - **Agent trailers** and the **Greenlight Office** act out a live run: lamps switch on as agents start, carts carry finished reports to the office, and the signal settles on the verdict.
 - **Vacant pads** and **Pitch a project** start a new analysis (demo mode by default). The new soundstage appears when the run completes.
 - Drag to pan, scroll to zoom, and use the map buttons to rotate or reset.
 
 See [STUDIO_LOT.md](STUDIO_LOT.md) for how the view maps to the data, what updates on its own, and how to extend it when you add features.
 
-The view reads the existing `/api/reports`, `/api/slate-dashboard`, `/api/analyze`, and job-event endpoints. When no reports are saved yet it shows a clearly labelled sample slate. Three.js is vendored in `web/vendor/`, so the page works offline.
+The view reads workspace/report APIs, `/api/analyze`, and job-event endpoints. When no reports are saved yet it shows a clearly labelled sample slate. Three.js is vendored in `web/vendor/`, so the page works offline. Open `/slate-planner` for portfolio budget planning.
 
 ## CopilotKit Decision Room
 
@@ -198,6 +204,14 @@ flowchart LR
     Quality --> Reports["Markdown + JSON Reports"]
     Quality --> Ledger["Run Ledger + Usage/Cost"]
     Reports --> WebPreview["Web Preview + Downloads"]
+    Reports --> Evidence["Evidence Provenance"]
+    Reports --> Stress["Deterministic Stress Tests\nNo AI calls"]
+    Reports --> Workspaces["Project Versions\nLocal SQLite"]
+    Workspaces --> Review["Producer Decisions + Milestones\nAppend-only histories"]
+    Workspaces --> Planner["Slate Budget Planner\nLatest versions only"]
+    Review --> Lot["Studio Lot UI"]
+    Evidence --> Lot
+    Stress --> Lot
 ```
 
 Execution shape:
@@ -209,6 +223,8 @@ Execution shape:
 5. Report quality checks validate recommendation consistency, comparable evidence, financial scenarios, and risk matrix coverage.
 6. Markdown, JSON, run ledger, and optional batch summaries are saved locally.
 7. The web report history reads saved JSON/Markdown artifacts for later review.
+8. Workspace versions link immutable report files; producer decisions refer to exact versions, while milestones record project-level development progress and their reference version.
+9. Evidence records never invent old retrieval dates or narrative citations. Stress tests use saved forecast volumes and deterministic calculations, not new model calls or revised approvals.
 
 ## Output Artifacts
 
@@ -219,6 +235,7 @@ Generated files stay local by default:
 - `outputs/runs/*_run.json` - run ledger with token usage, estimated cost, TMDB usage, and report paths
 - `outputs/batches/*_summary.csv` - batch comparison summary
 - `outputs/batches/*_summary.json` - structured batch summary
+- `outputs/projects/workspaces.sqlite3` - local versions, reanalysis inputs, producer decisions, and milestone histories (may contain confidential treatment text)
 - `data/private/*` - local private datasets, ignored by git
 
 ## Project Structure
@@ -231,7 +248,7 @@ greenlighting-agent/
 ├── data/private/           # Local private datasets, not committed
 ├── examples/projects.csv   # Batch-mode sample input
 ├── tools/tmdb_tools.py     # TMDB comparable enrichment
-├── utils/                  # Reports, ledgers, batch helpers, quality checks
+├── utils/                  # Reports, evidence, stress, workspaces, slate planning
 ├── web/                    # Static web demo assets
 ├── main.py                 # CLI entrypoint
 ├── web_app.py              # FastAPI web demo

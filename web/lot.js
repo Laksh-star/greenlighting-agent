@@ -2,6 +2,7 @@
 // Reads the same local API as the classic view; nothing here changes the agents.
 
 import { createLot } from "/static/lot-scene.js";
+import { renderMilestones, renderEvidence, renderStress } from "/static/project-tools.js";
 
 const AGENTS = [
   { key: "market_research", short: "Market", name: "Market research" },
@@ -233,9 +234,9 @@ async function loadSlate({ selectNewest = false } = {}) {
   let reports = [];
   let dashboard = null;
   try {
-    const [library, slate] = await Promise.all([getJSON(`/api/reports?limit=${REPORT_LIMIT}`), getJSON(`/api/slate-dashboard?limit=${REPORT_LIMIT}`)]);
+    const library = await getJSON("/api/projects");
     reports = library.reports || [];
-    dashboard = slate;
+    dashboard = library.dashboard;
   } catch (error) {
     toast(`Could not load the slate: ${error.message}`);
   }
@@ -291,9 +292,8 @@ async function loadDetail(id) {
 function renderKpis() {
   const d = state.dashboard || {};
   const counts = d.recommendation_counts || {};
-  // The page asks the API for at most 100 reports, so 100 is a floor, not a count.
   const count = d.report_count ?? 0;
-  $("#kpi-projects").textContent = !state.isSample && count >= REPORT_LIMIT ? `${REPORT_LIMIT}+` : String(count);
+  $("#kpi-projects").textContent = String(count);
   $("#kpi-projects-sub").textContent = `${counts.GO || 0} go · ${counts["CONDITIONAL GO"] || 0} conditional · ${counts["NO-GO"] || 0} no-go`;
   $("#kpi-exposure").textContent = money(d.total_exposure);
   $("#kpi-exposure-sub").textContent = `${money(d.total_budget)} production budgets`;
@@ -302,8 +302,8 @@ function renderKpis() {
   const shown = state.reports.length;
   const chip = $("#slate-chip");
   if (state.isSample) chip.textContent = "Sample slate · no saved reports yet";
-  else if (state.totalReports > shown) chip.textContent = `Lot shows the newest ${shown} of ${state.totalReports >= REPORT_LIMIT ? `${REPORT_LIMIT}+` : state.totalReports} reports`;
-  else chip.textContent = `${shown} saved ${shown === 1 ? "report" : "reports"}`;
+  else if (state.totalReports > shown) chip.textContent = `Lot shows the newest ${shown} of ${state.totalReports} projects`;
+  else chip.textContent = `${shown} saved ${shown === 1 ? "project" : "projects"}`;
   $("#tab-slate-n").textContent = String(shown);
   $("#tab-agents-n").textContent = String(AGENTS.length);
   $("#tab-watch-n").textContent = String((d.watchlist || []).length);
@@ -357,10 +357,21 @@ function renderDetail(report, payload) {
       </div>
     </div>
     <div class="verdict-row">
+      <span>AI recommendation</span>
       ${badge(report.recommendation)}
       <span>${Math.round(confidence * 100)}% confidence</span>
       <span>· ${esc(report.platform || "platform n/a")}</span>
     </div>
+    ${report.is_sample ? "" : `<section id="producer-decision" aria-label="Producer decision">
+      <p class="section-title">Producer decision</p>
+      <p>Awaiting review</p>
+      <button class="btn btn-ghost" id="decision-start">Record producer decision</button>
+    </section>`}
+    ${report.is_sample ? "" : `<nav class="detail-tool-links" aria-label="Project review tools">
+      <button type="button" class="btn btn-ghost" data-panel="development">Milestones</button>
+      <button type="button" class="btn btn-ghost" data-panel="stress">Stress test</button>
+      <button type="button" class="btn btn-ghost" data-panel="evidence">Evidence</button>
+    </nav>`}
     <div class="tiles">
       <div class="tile">
         <p class="tile-label">Budget</p>
@@ -427,8 +438,167 @@ function renderDetail(report, payload) {
         : `<div class="detail-actions">
              <a class="btn btn-ghost" href="/api/reports/${encodeURIComponent(report.id)}/brief-print" target="_blank" rel="noopener">Studio brief</a>
              <a class="btn btn-ghost" href="/api/reports/${encodeURIComponent(report.id)}/package">Pitch package</a>
-           </div>`
+             <button class="btn btn-primary" id="reanalyze">Reanalyze</button>
+           </div>
+           <section id="development" aria-label="Development milestones"><button class="btn btn-ghost" id="milestone-start">Track development milestones</button></section>
+           <section id="stress" aria-label="Financial stress testing"></section>
+           <section id="evidence" aria-label="Evidence provenance"></section>
+           <section id="versions" aria-label="Analysis versions"></section>`
     }`;
+  if (!report.is_sample) {
+    $("#reanalyze").addEventListener("click", () => reviseProject(report));
+    const helpers = {esc, json:getJSON, money, toast, refresh:loadSlate};
+    for (const button of panel.querySelectorAll('[data-panel]')) button.addEventListener('click', async ()=>{
+      try {
+        const id = button.dataset.panel;
+        if (id === 'development' && !report.workspace_id) {
+          const workspace = await ensureWorkspace(report);
+          if (state.selectedId !== report.id) return;
+          renderMilestones($('#development'), workspace, helpers);
+        }
+        const section = document.getElementById(id);
+        const details = section?.querySelector('details');
+        if (details) details.open = true;
+        section?.scrollIntoView({behavior:'smooth', block:'start'});
+      } catch(error) { toast(error.message); }
+    });
+    renderEvidence($("#evidence"), report.id, helpers).catch(error=>toast(error.message));
+    if (payload) renderStress($("#stress"), report.id, payload, helpers);
+    $("#milestone-start").addEventListener("click", async ()=>{
+      try {
+        const workspace = await ensureWorkspace(report);
+        if (state.selectedId !== report.id) return;
+        renderMilestones($("#development"), workspace, helpers);
+      } catch(error) { toast(error.message); }
+    });
+    $("#decision-start").addEventListener("click", async () => {
+      try {
+        const workspace = await ensureWorkspace(report);
+        if (state.selectedId !== report.id) return;
+        renderProducerDecision(report, workspace);
+        $("#decision-editor").open = true;
+      } catch (error) { toast(error.message); }
+    });
+    if (report.workspace_id) renderVersions(report).catch((error) => toast(error.message));
+  }
+}
+
+async function renderVersions(report) {
+  const workspace = await getJSON(`/api/projects/${encodeURIComponent(report.workspace_id)}`);
+  if (state.selectedId !== report.id) return;
+  renderProducerDecision(report, workspace);
+  renderMilestones($("#development"), workspace, {esc, json:getJSON, refresh:loadSlate, toast});
+  const container = $("#versions");
+  if (!container) return;
+  container.innerHTML = `<p class="section-title">Analysis versions <span>${workspace.versions.length}</span></p>
+    <label class="field"><span>Open version</span><select id="version-open">${workspace.versions.map((v) =>
+      `<option value="${esc(v.report_id)}">${v.number} · ${esc(v.label)}</option>`).join("")}</select></label>
+    <div id="version-preview"></div>
+    ${workspace.versions.length > 1 ? `<div class="field-row">
+      <label class="field"><span>Before</span><select id="version-before">${workspace.versions.map((v, i) => `<option value="${v.number}" ${i === 1 ? "selected" : ""}>${esc(v.label)}</option>`).join("")}</select></label>
+      <label class="field"><span>After</span><select id="version-after">${workspace.versions.map((v) => `<option value="${v.number}">${esc(v.label)}</option>`).join("")}</select></label>
+    </div><div id="version-comparison"></div>` : ""}`;
+  $("#version-open").addEventListener("change", async (event) => {
+    try {
+      const detail = await getJSON(`/api/reports/${encodeURIComponent(event.target.value)}`);
+      $("#version-preview").innerHTML = `<p>${badge(detail.summary.recommendation)} · Base ROI ${percent(detail.summary.moderate_roi, 1)} · Risk ${esc(detail.summary.overall_risk_score)}</p>
+        <p>${esc(detail.summary.description)}</p>
+        <a class="btn btn-ghost" href="/api/reports/${encodeURIComponent(event.target.value)}/brief-print" target="_blank" rel="noopener">Open version brief</a>`;
+    } catch (error) { toast(error.message); }
+  });
+  if (workspace.versions.length > 1) {
+    const compare = async () => {
+      try {
+        const data = await getJSON(`/api/projects/${encodeURIComponent(report.workspace_id)}/compare?before=${$("#version-before").value}&after=${$("#version-after").value}`);
+        const target = $("#version-comparison");
+        if (!target || state.selectedId !== report.id) return;
+        const labels = { moderate_roi: "Base ROI (%)", overall_risk_score: "Risk score", confidence: "Confidence (fraction)", total_exposure: "Capital at risk (USD)", budget: "Budget (USD)", recommendation: "Verdict" };
+        const value = (v) => typeof v === "number" ? Number(v.toFixed(4)).toLocaleString() : (v ?? "n/a");
+        target.innerHTML = `<div class="version-table"><table><thead><tr><th>Metric</th><th>Before</th><th>After</th><th>Change</th></tr></thead><tbody>${data.metrics.map((m) => `<tr><th>${esc(labels[m.field])}</th><td>${esc(value(m.before))}</td><td>${esc(value(m.after))}</td><td>${esc(m.delta === null ? "—" : value(m.delta))}</td></tr>`).join("")}</tbody></table></div>
+          <p class="section-title">Changed inputs</p><ul class="drivers">${data.inputs.length ? data.inputs.map((i) => `<li><b>${esc(i.field.replaceAll("_", " "))}</b>: ${esc(JSON.stringify(i.before))} → ${esc(JSON.stringify(i.after))}</li>`).join("") : "<li>No input changes.</li>"}</ul>`;
+      } catch (error) { toast(error.message); }
+    };
+    $("#version-before").addEventListener("change", compare);
+    $("#version-after").addEventListener("change", compare);
+    await compare();
+  }
+}
+
+async function ensureWorkspace(report) {
+  const workspace = report.workspace_id
+    ? await getJSON(`/api/projects/${encodeURIComponent(report.workspace_id)}`)
+    : await getJSON("/api/projects", {method: "POST", headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({name: report.project_name, report_id: report.id})});
+  report.workspace_id = workspace.id;
+  return workspace;
+}
+
+function renderProducerDecision(report, workspace) {
+  const container = $("#producer-decision");
+  if (!container) return;
+  const currentVersion = workspace.versions[0].number;
+  const current = workspace.decisions.find((d) => d.version === currentVersion);
+  const previous = workspace.decisions[0];
+  const versionName = (number) => workspace.versions.find((v) => v.number === number)?.label || `Version ${number}`;
+  const entry = (d) => `<li><b>${esc(d.status)}</b> · ${esc(versionName(d.version))}
+    <p>${esc(d.reviewer)} · ${esc(new Date(d.created_at).toLocaleString())}</p>
+    <p class="decision-text">${esc(d.notes)}</p>
+    ${d.conditions ? `<p class="decision-text"><b>Conditions:</b> ${esc(d.conditions)}</p>` : ""}</li>`;
+  container.innerHTML = `<p class="section-title">Producer decision <span>${esc(versionName(currentVersion))}</span></p>
+    <p><b>${esc(current?.status || "Awaiting review")}</b>${current ? ` · ${esc(current.reviewer)}` : ""}</p>
+    ${current ? `<p class="decision-text">${esc(current.notes)}</p>${current.conditions ? `<p class="decision-text"><b>Conditions:</b> ${esc(current.conditions)}</p>` : ""}` : previous ? `<p class="decision-stale">${esc(previous.status)} applies to ${esc(versionName(previous.version))}, not this version.</p>` : ""}
+    <details id="decision-editor"><summary>Record producer decision</summary>
+      <form id="decision-form">
+        <label class="field"><span>Reviewed version</span><select name="version">${workspace.versions.map((v) => `<option value="${v.number}">${v.number} · ${esc(v.label)}</option>`).join("")}</select></label>
+        <label class="field"><span>Decision</span><select name="status" required>
+          <option value="">Select decision</option><option>Approved</option><option>Hold</option><option>Rework</option><option>Passed</option>
+        </select></label>
+        <label class="field"><span>Reviewer name</span><input name="reviewer" required maxlength="120" /></label>
+        <label class="field"><span>Decision notes</span><textarea name="notes" required maxlength="5000" rows="3"></textarea></label>
+        <label class="field"><span>Conditions</span><textarea name="conditions" maxlength="5000" rows="2" placeholder="Budget cap, attachments, financing requirements…"></textarea></label>
+        <button class="btn btn-primary" type="submit">Save producer decision</button>
+      </form>
+    </details>
+    ${workspace.decisions.length ? `<details class="decision-history"><summary>Decision history (${workspace.decisions.length})</summary><ul class="drivers">${workspace.decisions.map(entry).join("")}</ul></details>` : ""}`;
+  $("#decision-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    const button = form.querySelector('button[type="submit"]');
+    button.disabled = true;
+    try {
+      await getJSON(`/api/projects/${encodeURIComponent(workspace.id)}/decisions`, {
+        method: "POST", headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({version: Number(data.get("version")), status: data.get("status"),
+          reviewer: String(data.get("reviewer")).trim(), notes: String(data.get("notes")).trim(),
+          conditions: String(data.get("conditions")).trim()})});
+      await loadSlate();
+      toast("Producer decision saved.");
+    } catch (error) { toast(error.message); }
+    finally { button.disabled = false; }
+  });
+}
+
+async function reviseProject(report) {
+  if (state.run) { toast("An analysis is already running."); return; }
+  try {
+    const workspace = await ensureWorkspace(report);
+    revisionRequest = {...workspace.versions[0].request, workspace_id: workspace.id};
+    pitchForm.reset();
+    for (const [name, value] of Object.entries(revisionRequest)) {
+      const field = pitchForm.elements[name];
+      if (!field) continue;
+      if (field.type === "checkbox") field.checked = Boolean(value);
+      else field.value = value ?? "";
+    }
+    pitchForm.elements.project_name.value = workspace.name;
+    pitchForm.elements.version_label.value = `Version ${workspace.versions.length + 1}`;
+    pitch.querySelector("h2").textContent = "Reanalyze project";
+    pitch.showModal();
+    if (revisionRequest.source_material_name && !revisionRequest.source_material_text) {
+      toast("This older report does not retain the full treatment. Paste it again before running.");
+    }
+  } catch (error) { toast(error.message); }
 }
 
 const clampPct = (value) => Math.max(0, Math.min(100, Number(value) || 0)).toFixed(0);
@@ -649,12 +819,17 @@ searchInput.addEventListener("blur", () => {
 const pitch = $("#pitch");
 const pitchForm = $("#pitch-form");
 let samplePrefilled = false;
+let revisionRequest = null;
 
 async function openPitch() {
   if (state.run) {
     toast("An analysis is already running.");
     return;
   }
+  revisionRequest = null;
+  pitchForm.reset();
+  pitch.querySelector("h2").textContent = "Pitch a project";
+  samplePrefilled = false;
   if (!samplePrefilled) {
     try {
       const sample = await getJSON("/api/sample");
@@ -676,6 +851,9 @@ pitchForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = new FormData(pitchForm);
   const body = {
+    ...(revisionRequest || {}),
+    project_name: String(form.get("project_name") || "").trim(),
+    version_label: String(form.get("version_label") || "").trim(),
     description: String(form.get("description") || "").trim(),
     budget: Number(form.get("budget")) || 0,
     genre: String(form.get("genre") || "Unknown").trim() || "Unknown",
@@ -683,6 +861,12 @@ pitchForm.addEventListener("submit", async (event) => {
     comparables: String(form.get("comparables") || ""),
     target_audience: String(form.get("target_audience") || "").trim() || "general",
     demo_mode: form.get("demo_mode") === "on",
+    distribution_fee_pct: Number(form.get("distribution_fee_pct")),
+    theatrical_revenue_share: Number(form.get("theatrical_revenue_share")),
+    risk_tolerance: form.get("risk_tolerance"),
+    source_material_name: String(form.get("source_material_name") || ""),
+    source_material_text: String(form.get("source_material_text") || ""),
+    marketing_spend: null,
   };
   // Blank means "let the finance model pick its default"; only send a number the user typed.
   const marketing = String(form.get("marketing_spend") ?? "").trim();

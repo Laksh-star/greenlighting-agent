@@ -370,3 +370,85 @@ http://127.0.0.1:8001
 - Keep project descriptions specific: hook, setting, audience, and production constraints help.
 - Use `--sample` before live analysis to confirm local setup.
 - Use batch mode to compare multiple project ideas quickly.
+## Project Versions In Studio Lot
+
+### Evidence, Stress And Development
+
+Select a saved project at `/lot`. Below its report actions, you will find:
+
+- **Evidence provenance:** source labels, dataset identifiers, retained retrieval
+  dates, missing financial evidence warnings and driver support. Unknown older
+  sources/dates remain unknown. Unsupported narrative claims are not citations.
+- **Financial stress test:** adjust revenue/value multiplier, production overrun
+  and marketing spend, then click Calculate stress case. No AI or TMDB calls are
+  made. The ROI threshold signal is not a revised recommendation or approval.
+  Forecast demand stays fixed when production costs rise; license value stays
+  fixed. Streaming results may represent subscriber value, not cash receipts.
+- **Development milestones:** record Treatment, Script, Packaging, Financing or
+  Production readiness as Not started, In progress, Blocked or Complete, with
+  an owner, optional due date and required notes. Updates retain history and the
+  reference version. Older standalone reports are linked to a workspace first.
+
+Milestones are project-level manual records, not proof of financing or production
+readiness; new analysis versions do not automatically reset them. Owner names
+are not authenticated and due dates do not create reminders. Stress cases are
+temporary calculations and do not update saved versions. New Markdown/JSON
+reports include provenance automatically; older reports are inspected without
+rewriting their files.
+
+### Slate Budget Planner
+
+Open `/slate-planner` (or **Budget planner** in the Studio Lot header). Set a
+funding cap in USD and select saved projects. The cap includes total modeled
+exposure, not just production budget. Each workspace contributes its latest
+version once; standalone reports remain independent projects.
+
+The summary shows exposure, remaining funds or overage, exposure-weighted ROI,
+modeled profit scenarios, and genre concentration. Missing scenario data is
+labelled unavailable with coverage counts, never counted as zero. A manual
+selection can exceed the cap, but the overage is flagged.
+
+**Suggest budget-fit slate** uses a ranked greedy selection: approved current
+versions first, then AI GO before CONDITIONAL GO, higher base ROI, and lower
+risk. It excludes Hold, Rework, Passed, AI NO-GO, negative-base-ROI, and incomplete
+financial candidates. It is not an optimal portfolio or an approval action;
+review conditions and unreviewed projects yourself.
+
+**Download plan JSON** captures the selection, version/report IDs, numbers, and
+warnings. Plans are not otherwise persisted yet. Estimates assume independent
+projects with no diversification, correlation, or release-timing adjustments.
+Streaming modeled value can include subscriber lifetime value rather than cash.
+
+### Producer Decisions
+
+Select a saved project in Studio Lot. Near the top of its details, open
+**Record producer decision**. Choose the reviewed version and Approved, Hold,
+Rework, or Passed. Enter the reviewer name and decision notes; conditions are
+optional. Click **Save producer decision**. Legacy standalone reports are linked
+to a workspace when you open this action; illustrative sample stages cannot
+receive decisions.
+
+Decisions are separate from the AI recommendation and never change report
+contents, roof colours, or financial forecasts. Each save adds a dated history
+entry. The latest decision on the current version is shown; a newer analysis
+version awaits its own review. Older approvals are labelled as applying only to
+their reviewed version. Conditions are recorded text, not automatically enforced.
+Reviewer names are self-entered, not authenticated identities. This remains a
+local workflow, not a multi-user approval or legal sign-off system.
+
+### Analyze Versions
+
+
+At `/lot`, enter a project name and version name when pitching. After analysis,
+select its soundstage and click **Reanalyze**. Revise the inputs, name the new
+version, check Demo mode, and submit. Each successful run is saved separately.
+
+Use **Open version** to inspect an earlier brief and the **Before** / **After**
+selectors to compare inputs and outcomes. Studio Lot totals use each project's
+latest completed version; report history in the classic UI still includes every
+report. Older standalone reports become workspaces when you choose Reanalyze.
+
+Full treatment text is retained locally for new workspace versions. Older
+reports may have only an excerpt and require you to paste the treatment again.
+Back up `outputs/projects/` together with `outputs/reports/`. Neither should be
+published to GitHub. See [STUDIO_LOT.md](STUDIO_LOT.md#project-workspaces).

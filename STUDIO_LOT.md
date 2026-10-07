@@ -1,5 +1,29 @@
 # Studio Lot View
 
+## Human Review
+
+Producer decisions are persisted in the local workspace SQLite database with a
+foreign key to the exact project/version. Records are append-only; corrections
+are new decisions, preserving the previous entry. A fresh analysis version does
+not inherit approval. AI report payloads and recommendations remain unchanged.
+
+`POST /api/projects/{id}/decisions` accepts `version`, `status` (Approved, Hold,
+Rework, Passed), `reviewer`, `notes`, and optional `conditions`. The workspace
+detail includes the decision history. Project summaries include `human_decision`
+for the current version and `previous_decision` for historical context. The schema
+is created additively for existing workspace databases. Decisions are local,
+unauthenticated records; conditions do not trigger enforcement or spending.
+
+## Overview
+
+The project detail panel now includes milestone snapshots/history, evidence
+provenance, and financial stress controls from `web/project-tools.js`. These use
+the backend APIs documented in [ARCHITECTURE.md](ARCHITECTURE.md#added-api-contracts).
+Milestones are project-level recorded progress; producer decisions remain
+version-specific. Stress signals never change soundstage verdict colours.
+Stored and legacy evidence are displayed without inventing missing dates or
+links. Sample-only illustrative stages do not expose saved-project tools.
+
 The Studio Lot is an isometric, strategy-game style view of the greenlight slate. It is a second front end over the same local API as the classic view; it adds no agent logic of its own.
 
 ![Studio Lot view](docs/screenshots/studio-lot.png)
@@ -155,3 +179,36 @@ These are the fields the lot reads. Renaming one on the backend without updating
 - Demo mode always returns CONDITIONAL GO, so a slate built only from demo runs is all amber.
 - Light theme only. On narrow screens the panels stack below the map.
 - The sample slate appears only while there are no saved reports, and is labelled as a sample.
+# Project Workspaces
+
+New analyses started from the web UI have a persistent project identity. In the
+pitch dialog, enter an optional project name and version name. Select a saved
+soundstage and use **Reanalyze** to revise its logline, budget, comparables,
+audience, financial assumptions, or treatment. Settings not exposed in the
+dialog (including private dataset selection) are preserved from the prior run.
+Demo/live mode is also preserved; check it before submitting a revision.
+
+The detail panel lists named versions, opens older version briefs, and compares
+any two versions' inputs, budget, capital at risk, base ROI, risk, confidence,
+and verdict. Numeric changes are after minus before; ROI differences are
+percentage points. These are observed changes, not proof that one input caused
+the verdict change.
+
+Each linked project occupies one soundstage using its latest completed version.
+Lot totals count projects once. The original report library and report-based
+dashboard remain available at `/` and retain every analysis. Legacy and CLI/batch
+reports remain standalone until Reanalyze, producer review or milestone tracking
+links one into a workspace.
+Failed analyses do not add a version. Existing Markdown/JSON files are untouched.
+
+Workspace metadata and full reanalysis inputs (including treatment text) are
+stored locally in `outputs/projects/workspaces.sqlite3`, excluded from Git.
+Keep this database together with `outputs/reports/` when backing up or moving
+the app. Older reports only retain treatment excerpts; the app warns when the
+full treatment must be pasted again. Do not expose this unauthenticated local
+app publicly; workspace inputs may be confidential.
+
+API: `GET /api/projects`, `POST /api/projects` (adopt a saved report),
+`GET /api/projects/{id}`, and
+`GET /api/projects/{id}/compare?before=1&after=2`.
+`POST /api/analyze` accepts `workspace_id`, `project_name`, and `version_label`.

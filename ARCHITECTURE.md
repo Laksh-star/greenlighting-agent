@@ -2,7 +2,92 @@
 
 ## System Overview
 
-The Greenlighting Agent is a multi-agent AI system built with the Claude Agent SDK that helps studios make data-driven decisions about greenlighting film and TV projects.
+The current implementation uses the Anthropic Python SDK directly for six
+specialized agents plus master synthesis. CLI, FastAPI classic UI, Studio Lot,
+and the optional CopilotKit decision room share the analysis backend. TMDB and
+local private datasets supply comparable evidence; no MCP server is wired.
+
+## Current Workflow And Storage
+
+```mermaid
+flowchart TD
+    UI["CLI / FastAPI / Studio Lot / CopilotKit"] --> Analysis["Master + six analysis agents"]
+    Data["TMDB / private datasets / demo evidence"] --> Analysis
+    Analysis --> Quality["Report quality gate"]
+    Quality --> Files["Immutable Markdown + JSON + run ledger"]
+    Files --> Provenance["Sources / retrieval dates / driver support"]
+    Files --> Stress["Saved-volume financial stress calculations"]
+    Files --> DB["outputs/projects/workspaces.sqlite3"]
+    DB --> Versions["Named versions + reanalysis input snapshots"]
+    DB --> Decisions["Version-specific human decision history"]
+    DB --> Milestones["Project development milestone history"]
+    Versions --> Slate["Latest-version slate and budget planner"]
+    Provenance --> ReviewUI["Studio Lot review controls"]
+    Stress --> ReviewUI
+    Decisions --> ReviewUI
+    Milestones --> ReviewUI
+```
+
+| Module | Responsibility |
+| --- | --- |
+| `utils/project_workspaces.py` | SQLite projects, numbered report links, version-specific producer decisions, project-wide milestone snapshots derived from append-only events |
+| `utils/evidence_provenance.py` | Conservative source labels, missing evidence warnings, exact-calculation driver links; no invented citations |
+| `utils/financial_stress.py` | Saved demand/value stress, fixed license value, changed cost exposure and break-even, existing risk-tolerance thresholds |
+| `utils/slate_planner.py` | Latest-version selection, cap/coverage/concentration checks, ranked greedy suggestions and exposure-weighted scenarios |
+| `web/project-tools.js` | Studio Lot milestone, provenance and stress controls |
+| `web/slate-planner.*` | Local portfolio planning and JSON download |
+
+### Boundaries
+
+- Analysis execution is async orchestration, but provider calls currently use
+  the synchronous Anthropic client. Jobs and SSE event buffers are in memory;
+  they do not survive a backend restart.
+- Reports are written once under unique filenames. SQLite stores metadata and
+  confidential reanalysis input snapshots, not an alternative report format.
+- Producer decisions are exact-version records. New versions do not inherit
+  approval; saving a review never changes the AI report or financial model.
+- Milestones are manually recorded project-level progress. Their reference
+  analysis version is retained, but a new version does not reset development
+  automatically. Owners are free-text, not authenticated users; dates are not
+  reminders. Completion counts are not readiness certification.
+- TMDB provenance records timestamps on actual retrieval. Private evidence
+  records local-read timestamps and dataset IDs. Old artifacts retain unknown
+  dates/sources; input-only rows and absent budget/revenue are warnings.
+- Narrative driver claims remain unsupported unless they exactly reference a
+  retained calculation/count. A link to an internal heuristic is not independent
+  validation of the claim. Demo narrative is explicitly labelled.
+- Stress changes forecast volume/value and costs, never reruns AI. Cost overruns
+  do not increase demand. The financial threshold signal is separate from AI and
+  human decisions. Break-even deducts fixed license value; at zero net share,
+  gross break-even is unavailable rather than zero. Streaming value may include
+  subscriber lifetime value, not cash receipts.
+- Planner scenarios sum independent project estimates without correlation,
+  release timing or diversification adjustments. Suggestions are greedy, not
+  optimal portfolio solutions; producer conditions are not enforced.
+- This is a local unauthenticated demo. Keep private datasets and all generated
+  outputs out of Git, and back up `outputs/reports/` with `outputs/projects/`.
+
+### Added API Contracts
+
+| Endpoint | Behavior |
+| --- | --- |
+| `GET/POST /api/projects` | Latest project slate / adopt a standalone report |
+| `GET /api/projects/{id}` | Versions, decision history, current milestones and milestone history |
+| `GET /api/projects/{id}/compare` | Compare two numbered versions |
+| `POST /api/projects/{id}/decisions` | Append a reviewed-version producer decision |
+| `POST /api/projects/{id}/milestones` | Append a development update with owner, date, notes and reference version |
+| `GET /api/reports/{id}/evidence` | Stored provenance or conservative legacy reconstruction |
+| `POST /api/reports/{id}/stress` | Stateless deterministic financial stress calculation |
+| `GET /api/slate-planner` | Current candidate analyses |
+| `POST /api/slate-planner/plan` | Manual basket or ranked budget-fit suggestion; no approval or spending action |
+
+## Earlier Design Notes (Historical)
+
+The diagrams and deployment/expansion notes below describe the earlier
+agent-focused design. Planned MCP, box-office and social integrations are not
+implemented. Use the current contracts and boundaries above for the runnable
+local application; older SDK and production-readiness descriptions are not
+current implementation guarantees.
 
 ## Architecture Diagram
 
