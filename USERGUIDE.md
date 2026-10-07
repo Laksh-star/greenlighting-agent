@@ -370,3 +370,18 @@ http://127.0.0.1:8001
 - Keep project descriptions specific: hook, setting, audience, and production constraints help.
 - Use `--sample` before live analysis to confirm local setup.
 - Use batch mode to compare multiple project ideas quickly.
+## Project Versions In Studio Lot
+
+At `/lot`, enter a project name and version name when pitching. After analysis,
+select its soundstage and click **Reanalyze**. Revise the inputs, name the new
+version, check Demo mode, and submit. Each successful run is saved separately.
+
+Use **Open version** to inspect an earlier brief and the **Before** / **After**
+selectors to compare inputs and outcomes. Studio Lot totals use each project's
+latest completed version; report history in the classic UI still includes every
+report. Older standalone reports become workspaces when you choose Reanalyze.
+
+Full treatment text is retained locally for new workspace versions. Older
+reports may have only an excerpt and require you to paste the treatment again.
+Back up `outputs/projects/` together with `outputs/reports/`. Neither should be
+published to GitHub. See [STUDIO_LOT.md](STUDIO_LOT.md#project-workspaces).

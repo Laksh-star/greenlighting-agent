@@ -8,6 +8,7 @@ film and TV projects through comprehensive multi-agent analysis.
 
 import asyncio
 import argparse
+from uuid import uuid4
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any
@@ -142,7 +143,8 @@ class GreenlightingCLI:
         project_name = sanitize_filename(extract_project_name(project_desc))
         timestamp = get_timestamp()
         
-        filename = f"{project_name}_{timestamp}.md"
+        # Rapid reanalyses must never overwrite an earlier version's artifacts.
+        filename = f"{project_name}_{timestamp}_{uuid4().hex[:8]}.md"
         filepath = OUTPUT_DIR / filename
         
         # Format report

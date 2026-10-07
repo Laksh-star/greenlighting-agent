@@ -233,9 +233,9 @@ async function loadSlate({ selectNewest = false } = {}) {
   let reports = [];
   let dashboard = null;
   try {
-    const [library, slate] = await Promise.all([getJSON(`/api/reports?limit=${REPORT_LIMIT}`), getJSON(`/api/slate-dashboard?limit=${REPORT_LIMIT}`)]);
+    const library = await getJSON("/api/projects");
     reports = library.reports || [];
-    dashboard = slate;
+    dashboard = library.dashboard;
   } catch (error) {
     toast(`Could not load the slate: ${error.message}`);
   }
@@ -291,9 +291,8 @@ async function loadDetail(id) {
 function renderKpis() {
   const d = state.dashboard || {};
   const counts = d.recommendation_counts || {};
-  // The page asks the API for at most 100 reports, so 100 is a floor, not a count.
   const count = d.report_count ?? 0;
-  $("#kpi-projects").textContent = !state.isSample && count >= REPORT_LIMIT ? `${REPORT_LIMIT}+` : String(count);
+  $("#kpi-projects").textContent = String(count);
   $("#kpi-projects-sub").textContent = `${counts.GO || 0} go · ${counts["CONDITIONAL GO"] || 0} conditional · ${counts["NO-GO"] || 0} no-go`;
   $("#kpi-exposure").textContent = money(d.total_exposure);
   $("#kpi-exposure-sub").textContent = `${money(d.total_budget)} production budgets`;
@@ -302,8 +301,8 @@ function renderKpis() {
   const shown = state.reports.length;
   const chip = $("#slate-chip");
   if (state.isSample) chip.textContent = "Sample slate · no saved reports yet";
-  else if (state.totalReports > shown) chip.textContent = `Lot shows the newest ${shown} of ${state.totalReports >= REPORT_LIMIT ? `${REPORT_LIMIT}+` : state.totalReports} reports`;
-  else chip.textContent = `${shown} saved ${shown === 1 ? "report" : "reports"}`;
+  else if (state.totalReports > shown) chip.textContent = `Lot shows the newest ${shown} of ${state.totalReports} projects`;
+  else chip.textContent = `${shown} saved ${shown === 1 ? "project" : "projects"}`;
   $("#tab-slate-n").textContent = String(shown);
   $("#tab-agents-n").textContent = String(AGENTS.length);
   $("#tab-watch-n").textContent = String((d.watchlist || []).length);
@@ -427,8 +426,78 @@ function renderDetail(report, payload) {
         : `<div class="detail-actions">
              <a class="btn btn-ghost" href="/api/reports/${encodeURIComponent(report.id)}/brief-print" target="_blank" rel="noopener">Studio brief</a>
              <a class="btn btn-ghost" href="/api/reports/${encodeURIComponent(report.id)}/package">Pitch package</a>
-           </div>`
+             <button class="btn btn-primary" id="reanalyze">Reanalyze</button>
+           </div>
+           <section id="versions" aria-label="Analysis versions"></section>`
     }`;
+  if (!report.is_sample) {
+    $("#reanalyze").addEventListener("click", () => reviseProject(report));
+    if (report.workspace_id) renderVersions(report).catch((error) => toast(error.message));
+  }
+}
+
+async function renderVersions(report) {
+  const workspace = await getJSON(`/api/projects/${encodeURIComponent(report.workspace_id)}`);
+  if (state.selectedId !== report.id) return;
+  const container = $("#versions");
+  if (!container) return;
+  container.innerHTML = `<p class="section-title">Analysis versions <span>${workspace.versions.length}</span></p>
+    <label class="field"><span>Open version</span><select id="version-open">${workspace.versions.map((v) =>
+      `<option value="${esc(v.report_id)}">${v.number} · ${esc(v.label)}</option>`).join("")}</select></label>
+    <div id="version-preview"></div>
+    ${workspace.versions.length > 1 ? `<div class="field-row">
+      <label class="field"><span>Before</span><select id="version-before">${workspace.versions.map((v, i) => `<option value="${v.number}" ${i === 1 ? "selected" : ""}>${esc(v.label)}</option>`).join("")}</select></label>
+      <label class="field"><span>After</span><select id="version-after">${workspace.versions.map((v) => `<option value="${v.number}">${esc(v.label)}</option>`).join("")}</select></label>
+    </div><div id="version-comparison"></div>` : ""}`;
+  $("#version-open").addEventListener("change", async (event) => {
+    try {
+      const detail = await getJSON(`/api/reports/${encodeURIComponent(event.target.value)}`);
+      $("#version-preview").innerHTML = `<p>${badge(detail.summary.recommendation)} · Base ROI ${percent(detail.summary.moderate_roi, 1)} · Risk ${esc(detail.summary.overall_risk_score)}</p>
+        <p>${esc(detail.summary.description)}</p>
+        <a class="btn btn-ghost" href="/api/reports/${encodeURIComponent(event.target.value)}/brief-print" target="_blank" rel="noopener">Open version brief</a>`;
+    } catch (error) { toast(error.message); }
+  });
+  if (workspace.versions.length > 1) {
+    const compare = async () => {
+      try {
+        const data = await getJSON(`/api/projects/${encodeURIComponent(report.workspace_id)}/compare?before=${$("#version-before").value}&after=${$("#version-after").value}`);
+        const target = $("#version-comparison");
+        if (!target || state.selectedId !== report.id) return;
+        const labels = { moderate_roi: "Base ROI (%)", overall_risk_score: "Risk score", confidence: "Confidence (fraction)", total_exposure: "Capital at risk (USD)", budget: "Budget (USD)", recommendation: "Verdict" };
+        const value = (v) => typeof v === "number" ? Number(v.toFixed(4)).toLocaleString() : (v ?? "n/a");
+        target.innerHTML = `<div class="version-table"><table><thead><tr><th>Metric</th><th>Before</th><th>After</th><th>Change</th></tr></thead><tbody>${data.metrics.map((m) => `<tr><th>${esc(labels[m.field])}</th><td>${esc(value(m.before))}</td><td>${esc(value(m.after))}</td><td>${esc(m.delta === null ? "—" : value(m.delta))}</td></tr>`).join("")}</tbody></table></div>
+          <p class="section-title">Changed inputs</p><ul class="drivers">${data.inputs.length ? data.inputs.map((i) => `<li><b>${esc(i.field.replaceAll("_", " "))}</b>: ${esc(JSON.stringify(i.before))} → ${esc(JSON.stringify(i.after))}</li>`).join("") : "<li>No input changes.</li>"}</ul>`;
+      } catch (error) { toast(error.message); }
+    };
+    $("#version-before").addEventListener("change", compare);
+    $("#version-after").addEventListener("change", compare);
+    await compare();
+  }
+}
+
+async function reviseProject(report) {
+  if (state.run) { toast("An analysis is already running."); return; }
+  try {
+    const workspace = report.workspace_id
+      ? await getJSON(`/api/projects/${encodeURIComponent(report.workspace_id)}`)
+      : await getJSON("/api/projects", {method: "POST", headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({name: report.project_name, report_id: report.id})});
+    revisionRequest = {...workspace.versions[0].request, workspace_id: workspace.id};
+    pitchForm.reset();
+    for (const [name, value] of Object.entries(revisionRequest)) {
+      const field = pitchForm.elements[name];
+      if (!field) continue;
+      if (field.type === "checkbox") field.checked = Boolean(value);
+      else field.value = value ?? "";
+    }
+    pitchForm.elements.project_name.value = workspace.name;
+    pitchForm.elements.version_label.value = `Version ${workspace.versions.length + 1}`;
+    pitch.querySelector("h2").textContent = "Reanalyze project";
+    pitch.showModal();
+    if (revisionRequest.source_material_name && !revisionRequest.source_material_text) {
+      toast("This older report does not retain the full treatment. Paste it again before running.");
+    }
+  } catch (error) { toast(error.message); }
 }
 
 const clampPct = (value) => Math.max(0, Math.min(100, Number(value) || 0)).toFixed(0);
@@ -649,12 +718,17 @@ searchInput.addEventListener("blur", () => {
 const pitch = $("#pitch");
 const pitchForm = $("#pitch-form");
 let samplePrefilled = false;
+let revisionRequest = null;
 
 async function openPitch() {
   if (state.run) {
     toast("An analysis is already running.");
     return;
   }
+  revisionRequest = null;
+  pitchForm.reset();
+  pitch.querySelector("h2").textContent = "Pitch a project";
+  samplePrefilled = false;
   if (!samplePrefilled) {
     try {
       const sample = await getJSON("/api/sample");
@@ -676,6 +750,9 @@ pitchForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = new FormData(pitchForm);
   const body = {
+    ...(revisionRequest || {}),
+    project_name: String(form.get("project_name") || "").trim(),
+    version_label: String(form.get("version_label") || "").trim(),
     description: String(form.get("description") || "").trim(),
     budget: Number(form.get("budget")) || 0,
     genre: String(form.get("genre") || "Unknown").trim() || "Unknown",
@@ -683,6 +760,12 @@ pitchForm.addEventListener("submit", async (event) => {
     comparables: String(form.get("comparables") || ""),
     target_audience: String(form.get("target_audience") || "").trim() || "general",
     demo_mode: form.get("demo_mode") === "on",
+    distribution_fee_pct: Number(form.get("distribution_fee_pct")),
+    theatrical_revenue_share: Number(form.get("theatrical_revenue_share")),
+    risk_tolerance: form.get("risk_tolerance"),
+    source_material_name: String(form.get("source_material_name") || ""),
+    source_material_text: String(form.get("source_material_text") || ""),
+    marketing_spend: null,
   };
   // Blank means "let the finance model pick its default"; only send a number the user typed.
   const marketing = String(form.get("marketing_spend") ?? "").trim();

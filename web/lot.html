@@ -109,6 +109,10 @@
             <svg viewBox="0 0 20 20"><path d="m5 5 10 10M15 5 5 15" /></svg>
           </button>
         </header>
+        <div class="field-row">
+          <label class="field"><span>Project name</span><input name="project_name" maxlength="120" /></label>
+          <label class="field"><span>Version name</span><input name="version_label" maxlength="120" placeholder="Original" /></label>
+        </div>
         <label class="field">
           <span>Logline</span>
           <textarea name="description" rows="3" required minlength="10"></textarea>
@@ -132,6 +136,16 @@
           <input name="marketing_spend" type="number" min="0" step="500000" placeholder="Model default" />
           <small>Leave blank for the model default: 50% of budget for theatrical and hybrid, none for streaming. Enter 0 for no marketing spend.</small>
         </label>
+        <details>
+          <summary>Financial assumptions and treatment</summary>
+          <div class="field-row">
+            <label class="field"><span>Distribution fee (fraction)</span><input name="distribution_fee_pct" type="number" min="0" max="0.5" step="0.01" value="0.12" /></label>
+            <label class="field"><span>Theatrical share (fraction)</span><input name="theatrical_revenue_share" type="number" min="0" max="1" step="0.01" value="0.5" /></label>
+            <label class="field"><span>Risk tolerance</span><select name="risk_tolerance"><option>balanced</option><option>conservative</option><option>aggressive</option></select></label>
+          </div>
+          <label class="field"><span>Treatment name</span><input name="source_material_name" /></label>
+          <label class="field"><span>Treatment</span><textarea name="source_material_text" rows="5"></textarea></label>
+        </details>
         <footer>
           <label class="switch">
             <input name="demo_mode" type="checkbox" checked />

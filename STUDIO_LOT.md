@@ -155,3 +155,35 @@ These are the fields the lot reads. Renaming one on the backend without updating
 - Demo mode always returns CONDITIONAL GO, so a slate built only from demo runs is all amber.
 - Light theme only. On narrow screens the panels stack below the map.
 - The sample slate appears only while there are no saved reports, and is labelled as a sample.
+# Project Workspaces
+
+New analyses started from the web UI have a persistent project identity. In the
+pitch dialog, enter an optional project name and version name. Select a saved
+soundstage and use **Reanalyze** to revise its logline, budget, comparables,
+audience, financial assumptions, or treatment. Settings not exposed in the
+dialog (including private dataset selection) are preserved from the prior run.
+Demo/live mode is also preserved; check it before submitting a revision.
+
+The detail panel lists named versions, opens older version briefs, and compares
+any two versions' inputs, budget, capital at risk, base ROI, risk, confidence,
+and verdict. Numeric changes are after minus before; ROI differences are
+percentage points. These are observed changes, not proof that one input caused
+the verdict change.
+
+Each linked project occupies one soundstage using its latest completed version.
+Lot totals count projects once. The original report library and report-based
+dashboard remain available at `/` and retain every analysis. Legacy and CLI/batch
+reports remain standalone until **Reanalyze** links one into a workspace.
+Failed analyses do not add a version. Existing Markdown/JSON files are untouched.
+
+Workspace metadata and full reanalysis inputs (including treatment text) are
+stored locally in `outputs/projects/workspaces.sqlite3`, excluded from Git.
+Keep this database together with `outputs/reports/` when backing up or moving
+the app. Older reports only retain treatment excerpts; the app warns when the
+full treatment must be pasted again. Do not expose this unauthenticated local
+app publicly; workspace inputs may be confidential.
+
+API: `GET /api/projects`, `POST /api/projects` (adopt a saved report),
+`GET /api/projects/{id}`, and
+`GET /api/projects/{id}/compare?before=1&after=2`.
+`POST /api/analyze` accepts `workspace_id`, `project_name`, and `version_label`.

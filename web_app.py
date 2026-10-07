@@ -18,6 +18,7 @@ from tools.tmdb_tools import tmdb_client
 from tools.private_dataset import PRIVATE_DATASET_SAMPLE, private_dataset_store
 from utils.batch import build_batch_summary_row, load_batch_projects_from_text, save_batch_summary
 from utils.report_library import list_report_summaries, load_report_detail
+from utils.project_workspaces import ProjectWorkspaces, compare_versions
 from utils.pitch_package import build_pitch_package
 from utils.sample_data import SAMPLE_PROJECT
 from utils.slate_dashboard import build_slate_dashboard
@@ -32,6 +33,7 @@ app = FastAPI(title="Greenlighting Agent Demo")
 app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
 
 JOBS: Dict[str, Dict[str, Any]] = {}
+workspaces = ProjectWorkspaces(OUTPUT_DIR.parent / "projects" / "workspaces.sqlite3")
 
 TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w185"
 FALLBACK_COMPARABLES = [
@@ -99,6 +101,9 @@ FALLBACK_COMPARABLES = [
 
 
 class AnalysisRequest(BaseModel):
+    workspace_id: str = ""
+    project_name: str = Field("", max_length=120)
+    version_label: str = Field("", max_length=120)
     description: str = Field(..., min_length=10)
     budget: int = Field(0, ge=0)
     genre: str = "Unknown"
@@ -200,6 +205,11 @@ async def search_comparables(
 @app.post("/api/analyze")
 async def analyze(request: AnalysisRequest):
     """Start an async analysis job and return its ID."""
+    if request.workspace_id:
+        try:
+            workspaces.get(request.workspace_id)
+        except FileNotFoundError:
+            raise HTTPException(status_code=404, detail="Project not found")
     job_id = uuid.uuid4().hex
     JOBS[job_id] = {
         "id": job_id,
@@ -351,6 +361,58 @@ async def slate_dashboard(limit: int = Query(50, ge=1, le=100)):
     return build_slate_dashboard(reports)
 
 
+class WorkspaceRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=120)
+    report_id: str
+
+
+def _request_from_report(payload):
+    project = payload.get("project", {})
+    data = {key: value for key, value in project.items() if key in AnalysisRequest.model_fields}
+    data.update(payload.get("financial_assumptions", {}))
+    data["comparables"] = ", ".join(project.get("comparables", []))
+    source = project.get("source_material", {})
+    data["source_material_name"] = source.get("name", "")
+    data["source_material_text"] = source.get("text", "")
+    data["demo_mode"] = bool(project.get("demo_mode", False))
+    return AnalysisRequest(**data).model_dump(exclude={"workspace_id", "project_name", "version_label"})
+
+
+@app.post("/api/projects")
+async def adopt_report(request: WorkspaceRequest):
+    try:
+        detail = load_report_detail(OUTPUT_DIR, request.report_id)
+        project_id = workspaces.create(request.name.strip() or "Untitled project", request.report_id,
+                                       _request_from_report(detail["payload"]))
+        return workspaces.get(project_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+
+@app.get("/api/projects")
+async def project_slate():
+    reports = workspaces.slate(OUTPUT_DIR)
+    return {"reports": reports, "dashboard": build_slate_dashboard(reports)}
+
+
+@app.get("/api/projects/{project_id}")
+async def project_workspace(project_id: str):
+    try:
+        return workspaces.get(project_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+
+@app.get("/api/projects/{project_id}/compare")
+async def project_comparison(project_id: str, before: int = Query(..., ge=1), after: int = Query(..., ge=1)):
+    try:
+        return compare_versions(workspaces.get(project_id), OUTPUT_DIR, before, after)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Project or report not found")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
 @app.get("/api/reports/{report_id}")
 async def report_detail(report_id: str):
     """Return one generated report with Markdown preview content."""
@@ -465,6 +527,12 @@ async def _run_analysis(job_id: str, request: AnalysisRequest):
             },
             source_material=source_material,
         )
+        project_id = request.workspace_id or workspaces.create(
+            request.project_name.strip() or request.description[:80])
+        workspaces.add_version(project_id, Path(result["analysis_json_path"]).stem,
+                               request.version_label.strip(), request.model_dump(
+                                   exclude={"workspace_id", "project_name", "version_label"}))
+        result["workspace_id"] = project_id
         JOBS[job_id]["result"] = result
         JOBS[job_id]["status"] = "completed"
         _append_event(job_id, "job", "analysis", "completed")

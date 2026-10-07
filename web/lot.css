@@ -1116,3 +1116,9 @@ svg {
     animation: none !important;
   }
 }
+/* Version comparison remains scrollable inside the compact detail panel. */
+.version-table { overflow-x: auto; }
+.version-table table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.version-table th, .version-table td { text-align: left; padding: 8px; border-bottom: 1px solid #d4d9d6; }
+#versions { margin-top: 20px; }
+#versions .drivers { overflow-wrap: anywhere; }

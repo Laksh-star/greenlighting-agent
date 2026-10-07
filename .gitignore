@@ -46,6 +46,7 @@ outputs/runs/*.json
 outputs/batches/*.csv
 outputs/batches/*.json
 outputs/packages/
+outputs/projects/
 outputs/test_private_data/
 outputs/test_packages/
 outputs/test_report_library/
