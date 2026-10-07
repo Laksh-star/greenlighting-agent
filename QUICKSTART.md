@@ -189,6 +189,12 @@ See [USERGUIDE.md](USERGUIDE.md) for these controls and their limitations.
 
 ## Getting Help
 
+In Studio Lot, select a soundstage and click **Actuals** for cumulative USD
+snapshots/CSV import and exact-version forecast comparisons. Click **Production**
+for manual cast, location, availability, VFX and schedule constraints. These
+work without API keys and persist locally; they do not alter AI recommendations.
+See [USERGUIDE.md](USERGUIDE.md#actuals-and-production-constraints).
+
 - Check the main README.md for full documentation
 - Review example projects above
 - Check the `outputs/reports/` folder for sample reports

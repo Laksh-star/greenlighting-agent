@@ -452,3 +452,33 @@ Full treatment text is retained locally for new workspace versions. Older
 reports may have only an excerpt and require you to paste the treatment again.
 Back up `outputs/projects/` together with `outputs/reports/`. Neither should be
 published to GitHub. See [STUDIO_LOT.md](STUDIO_LOT.md#project-workspaces).
+
+## Actuals And Production Constraints
+
+Select a project's soundstage in Studio Lot, then click **Actuals**. Open
+**Record cumulative snapshot**, choose the forecast version, date and reporting
+phase, enter known USD totals and notes, then save. Leave unknown fields blank;
+enter zero only when confirmed. Production/marketing spend, gross revenue and
+studio cash receipts are separate. The table compares cumulative actuals against
+the chosen version's full forecast, not a time-adjusted forecast. Interim
+underspend is not final savings. Cash ROI requires both cost totals and receipts.
+Streaming subscriber lifetime value is not treated as forecast cash receipts.
+
+Use **Snapshot history** to review an earlier snapshot. Corrections append a
+new snapshot for the same date; the newest record for the newest as-of date is
+shown by default. Totals are never summed across snapshots. Exact duplicates
+are skipped. **Import actuals CSV** provides a template; it accepts up to 200
+rows, at most 200 KB, USD with up to two decimal places and existing version
+numbers. Invalid rows or unknown versions reject the entire import.
+
+Click **Production**, then **Add or update constraint**. Choose Cast/Talent,
+Location, Availability, VFX or Schedule, add title, owner/contact, optional date
+window and notes. Status can be Proposed, Pending, Confirmed, Blocked or Released.
+Choose an existing constraint to update it; previous entries remain in
+**Constraint history**. Updates refer to the project's latest analysis version.
+Blockers do not change the AI report or approve/reject the project.
+
+These records are manually supplied local evidence, not audited accounts,
+verified talent availability, automated scheduling or booking. No API keys are
+needed. Demo analyses can be used to try the workflow, but their forecasts remain
+sample data. Keep the workspace database and linked reports together in backups.

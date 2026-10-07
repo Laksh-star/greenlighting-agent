@@ -1134,3 +1134,18 @@ svg {
 #stress input[type=range] { width: 100%; }
 .detail-tool-links { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 16px; }
 .detail .btn-ghost { display: inline-flex; }
+#actuals, #constraints { margin: 16px 0; font-size: 13px; }
+#actuals summary, #constraints summary { cursor: pointer; padding: 10px 0; }
+#actuals .drivers, #constraints .drivers { overflow-wrap: anywhere; }
+#actuals .field-row, #constraints .field-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+#actuals input, #constraints input { min-width: 0; }
+.actuals-comparison { container-type: inline-size; }
+@container (max-width: 380px) {
+  .actuals-comparison table, .actuals-comparison tbody { display: block; }
+  .actuals-comparison thead { display: none; }
+  .actuals-comparison tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-bottom: 1px solid #d4d9d6; }
+  .actuals-comparison th { grid-column: 1 / -1; padding: 8px 0 4px; }
+  .actuals-comparison td { padding: 4px 4px 8px 0; font-size: 11px; overflow-wrap: anywhere; }
+  .actuals-comparison th, .actuals-comparison td { border-bottom: 0; }
+  .actuals-comparison td::before { content: attr(data-label); display: block; font-size: 11px; color: #526077; margin-bottom: 3px; }
+}

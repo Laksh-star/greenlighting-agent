@@ -52,6 +52,8 @@ Demo video: [demo.mp4](demo.mp4)
 - **Evidence provenance:** Comparable sources and retrieval dates, explicit missing-data warnings, user-assumption/default labels, and conservative decision-driver support links in Markdown/JSON and Studio Lot.
 - **Financial stress testing:** Recalculate saved scenarios with revenue/value multipliers, production overruns, and marketing changes without AI calls. Financial signals remain separate from saved recommendations.
 - **Development milestones:** Track treatment, script, packaging, financing, and production readiness with owners, dates, notes, and persistent update history.
+- **Actuals tracking:** Save cumulative USD snapshots or import CSV, compare against a chosen analysis version, and track cash receipts separately from gross revenue. Exact duplicates are skipped.
+- **Production constraints:** Record cast/talent, locations, availability, VFX and schedule constraints with owners, date windows, blocker status and append-only update history.
 - **CopilotKit decision room:** Optional React + CopilotKit UI with shared agent context, generative UI surfaces, frontend tools, and a local or LLM-backed Copilot runtime.
 
 ## Demo Screenshots
@@ -235,7 +237,7 @@ Generated files stay local by default:
 - `outputs/runs/*_run.json` - run ledger with token usage, estimated cost, TMDB usage, and report paths
 - `outputs/batches/*_summary.csv` - batch comparison summary
 - `outputs/batches/*_summary.json` - structured batch summary
-- `outputs/projects/workspaces.sqlite3` - local versions, reanalysis inputs, producer decisions, and milestone histories (may contain confidential treatment text)
+- `outputs/projects/workspaces.sqlite3` - local versions, reanalysis inputs, producer decisions, milestones, actuals and constraint histories (may contain confidential treatment text)
 - `data/private/*` - local private datasets, ignored by git
 
 ## Project Structure
